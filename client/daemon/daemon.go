@@ -44,6 +44,10 @@ type Daemon struct {
 	saved    persisted
 	loggedIn bool
 	user     api.User
+	// accessToken authenticates calls to the server while logged in.
+	accessToken string
+
+	renewMu sync.Mutex // serializes access token renewal
 }
 
 func New(cfg Config) (*Daemon, error) {
@@ -62,6 +66,7 @@ func New(cfg Config) (*Daemon, error) {
 	mux.HandleFunc("GET "+ipc.PathStatus, d.handleStatus)
 	mux.HandleFunc("PUT "+ipc.PathServer, d.handleSetServer)
 	mux.HandleFunc("POST "+ipc.PathLogin, d.handleLogin)
+	d.roomRoutes(mux)
 	d.http = &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	return d, nil
 }
@@ -166,6 +171,7 @@ func (d *Daemon) acceptSession(sess api.Session) error {
 	}
 	d.loggedIn = true
 	d.user = sess.User
+	d.accessToken = sess.AccessToken
 	return nil
 }
 
@@ -209,6 +215,7 @@ func (d *Daemon) handleSetServer(w http.ResponseWriter, r *http.Request) {
 		d.saved.RefreshToken = ""
 		d.loggedIn = false
 		d.user = api.User{}
+		d.accessToken = ""
 		if err := saveState(d.cfg.StateDir, d.saved); err != nil {
 			writeError(w, err)
 			return
