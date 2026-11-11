@@ -1,0 +1,18 @@
+# Build context: repository root.
+FROM golang:1.27-alpine AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY api ./api
+COPY internal ./internal
+COPY server ./server
+COPY cmd/mokoup2p-server ./cmd/mokoup2p-server
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/mokoup2p-server ./cmd/mokoup2p-server
+
+FROM alpine:3.22
+RUN adduser -D -H -u 10001 mokoup2p && mkdir /data && chown mokoup2p /data
+COPY --from=build /out/mokoup2p-server /usr/local/bin/mokoup2p-server
+USER mokoup2p
+VOLUME /data
+EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/mokoup2p-server"]

@@ -1,0 +1,167 @@
+// Command mokoup2p is the command-line front end of the client daemon.
+package main
+
+import (
+	"bufio"
+	"context"
+	"errors"
+	"flag"
+	"fmt"
+	"os"
+	"strings"
+	"time"
+
+	"golang.org/x/term"
+
+	"github.com/Bank5y/mokoup2p/api"
+	"github.com/Bank5y/mokoup2p/client/ipc"
+)
+
+const usage = `用法：mokoup2p <命令> [参数]
+
+命令：
+  server [地址]          查看或设置服务端地址，例如 https://p2p.example.com
+  login [-u 用户名]      登录（密码从终端读取）
+  status                 查看登录状态
+`
+
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Fprint(os.Stderr, usage)
+		os.Exit(2)
+	}
+	client := ipc.NewClient(ipc.DefaultSocketPath())
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var err error
+	switch os.Args[1] {
+	case "server":
+		err = cmdServer(ctx, client, os.Args[2:])
+	case "login":
+		err = cmdLogin(ctx, client, os.Args[2:])
+	case "status":
+		err = cmdStatus(ctx, client)
+	case "-h", "--help", "help":
+		fmt.Print(usage)
+	default:
+		fmt.Fprintf(os.Stderr, "未知命令：%s\n\n%s", os.Args[1], usage)
+		os.Exit(2)
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "错误："+describe(err))
+		os.Exit(1)
+	}
+}
+
+func cmdServer(ctx context.Context, c *ipc.Client, args []string) error {
+	var st ipc.Status
+	var err error
+	if len(args) == 0 {
+		st, err = c.Status(ctx)
+	} else {
+		st, err = c.SetServer(ctx, args[0])
+	}
+	if err != nil {
+		return err
+	}
+	if st.ServerURL == "" {
+		fmt.Println("尚未设置服务端地址")
+	} else {
+		fmt.Println("服务端地址：" + st.ServerURL)
+	}
+	return nil
+}
+
+func cmdLogin(ctx context.Context, c *ipc.Client, args []string) error {
+	fs := flag.NewFlagSet("login", flag.ExitOnError)
+	username := fs.String("u", "", "用户名")
+	_ = fs.Parse(args)
+
+	if st, err := c.Status(ctx); err != nil {
+		return err
+	} else if st.ServerURL == "" {
+		return &api.Error{Code: ipc.ErrServerNotConfigured}
+	}
+	in := bufio.NewReader(os.Stdin)
+	if *username == "" {
+		fmt.Print("用户名：")
+		line, err := in.ReadString('\n')
+		if err != nil {
+			return err
+		}
+		*username = strings.TrimSpace(line)
+	}
+	password, err := readPassword(in)
+	if err != nil {
+		return err
+	}
+	st, err := c.Login(ctx, *username, password)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("登录成功：%s（设备：%s）\n", st.Username, st.DeviceName)
+	return nil
+}
+
+func readPassword(in *bufio.Reader) (string, error) {
+	fmt.Print("密码：")
+	if term.IsTerminal(int(os.Stdin.Fd())) {
+		b, err := term.ReadPassword(int(os.Stdin.Fd()))
+		fmt.Println()
+		return string(b), err
+	}
+	line, err := in.ReadString('\n')
+	if err != nil && line == "" {
+		return "", err
+	}
+	return strings.TrimRight(line, "\r\n"), nil
+}
+
+func cmdStatus(ctx context.Context, c *ipc.Client) error {
+	st, err := c.Status(ctx)
+	if err != nil {
+		return err
+	}
+	server := st.ServerURL
+	if server == "" {
+		server = "（未设置）"
+	}
+	fmt.Println("服务端：" + server)
+	fmt.Printf("设备：%s（%s）\n", st.DeviceName, st.DeviceID)
+	switch st.State {
+	case ipc.StateIdle:
+		role := ""
+		if st.IsAdmin {
+			role = "，管理员"
+		}
+		fmt.Printf("状态：已登录（%s%s），未在房间中\n", st.Username, role)
+	default:
+		fmt.Println("状态：未登录")
+	}
+	return nil
+}
+
+var messages = map[api.ErrorCode]string{
+	api.ErrBadRequest:          "请求无效",
+	api.ErrInvalidCredentials:  "用户名或密码错误",
+	api.ErrAccountDisabled:     "账号已被禁用",
+	api.ErrTokenInvalid:        "登录状态已失效，请重新登录",
+	ipc.ErrServerNotConfigured: "尚未设置服务端地址，请先运行 mokoup2p server <地址>",
+	ipc.ErrServerUnreachable:   "无法连接服务端",
+	ipc.ErrServerBadResponse:   "服务端响应异常，请检查服务端地址",
+}
+
+func describe(err error) string {
+	var apiErr *api.Error
+	if errors.As(err, &apiErr) {
+		if msg, ok := messages[apiErr.Code]; ok {
+			if apiErr.Code == api.ErrBadRequest {
+				return msg + "：" + apiErr.Message
+			}
+			return msg
+		}
+		return apiErr.Message
+	}
+	return "无法连接后台服务（mokoup2pd 是否在运行？）：" + err.Error()
+}

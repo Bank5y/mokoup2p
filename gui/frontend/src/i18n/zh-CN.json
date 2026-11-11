@@ -1,0 +1,36 @@
+{
+  "app": {
+    "name": "mokoup2p"
+  },
+  "login": {
+    "title": "登录",
+    "serverUrl": "服务端地址",
+    "serverUrlPlaceholder": "https://p2p.example.com",
+    "username": "用户名",
+    "password": "密码",
+    "submit": "登录",
+    "submitting": "正在登录…",
+    "noAccountHint": "请联系管理员开通账号"
+  },
+  "home": {
+    "loggedInAs": "已登录：{username}",
+    "device": "设备：{deviceName}",
+    "empty": "暂无内容"
+  },
+  "common": {
+    "loading": "正在连接后台服务…",
+    "retry": "重试"
+  },
+  "errors": {
+    "bad_request": "请求无效，请检查输入",
+    "invalid_credentials": "用户名或密码错误",
+    "account_disabled": "账号已被禁用",
+    "token_invalid": "登录状态已失效，请重新登录",
+    "server_not_configured": "请先填写服务端地址",
+    "server_unreachable": "无法连接服务端，请检查地址和网络",
+    "server_bad_response": "服务端响应异常，请检查服务端地址",
+    "daemon_unreachable": "无法连接后台服务，请确认 mokoup2pd 正在运行",
+    "internal": "发生内部错误",
+    "unknown": "发生未知错误"
+  }
+}
