@@ -18,13 +18,28 @@ const errDaemonUnreachable api.ErrorCode = "daemon_unreachable"
 type App struct {
 	ctx context.Context
 	ipc *ipc.Client
+	// tray is set when the desktop shows tray icons. Then the window's ×
+	// only hides the window (the device stays in its room) and the tray's
+	// "退出" is the real exit.
+	tray bool
 }
 
 func NewApp() *App {
-	return &App{ipc: ipc.NewClient(ipc.DefaultSocketPath())}
+	return &App{ipc: ipc.NewClient(ipc.DefaultSocketPath()), tray: trayAvailable()}
 }
 
-func (a *App) startup(ctx context.Context) { a.ctx = ctx }
+func (a *App) startup(ctx context.Context) {
+	a.ctx = ctx
+	if a.tray {
+		a.startTray()
+	}
+}
+
+func (a *App) shutdown(ctx context.Context) {
+	if a.tray {
+		a.stopTray()
+	}
+}
 
 func (a *App) Status() (ipc.Status, error) {
 	ctx, cancel := a.timeout()

@@ -159,5 +159,9 @@
     "colMember": "用户名 / 设备名",
     "colVirtualIp": "虚拟 IP",
     "self": "本机"
+  },
+  "tray": {
+    "show": "显示主窗口",
+    "quit": "退出"
   }
 }
