@@ -15,7 +15,8 @@
   "home": {
     "loggedInAs": "已登录：{username}",
     "device": "设备：{deviceName}",
-    "createRoom": "创建房间"
+    "createRoom": "创建房间",
+    "joinRoom": "加入房间"
   },
   "nav": {
     "home": "主页",
@@ -71,9 +72,31 @@
     "room_not_found": "房间不存在",
     "room_limit_reached": "房间数已达上限",
     "not_room_owner": "只有房主可以这样做",
+    "room_password_wrong": "房间密码错误",
+    "room_full": "房间已满",
+    "in_other_room": "本设备已在其他房间中，请先退出",
+    "in_room": "本设备已在房间中，请先退出当前房间",
+    "engine_failed": "网络组件启动失败，已退出房间",
     "copy_failed": "复制失败，请手动复制",
-    "daemon_unreachable":"无法连接后台服务，请确认 mokoup2pd 正在运行",
+    "daemon_unreachable": "无法连接后台服务，请确认 mokoup2pd 正在运行",
     "internal": "发生内部错误",
     "unknown": "发生未知错误"
+  },
+  "joinRoom": {
+    "title": "加入房间",
+    "codePlaceholder": "例如 K7QH-3MXP",
+    "password": "房间密码",
+    "passwordHint": "房间没有密码时留空",
+    "submit": "加入",
+    "submitting": "正在加入…",
+    "cancel": "取消"
+  },
+  "currentRoom": {
+    "virtualIp": "本机虚拟 IP",
+    "subnet": "网段",
+    "owner": "房主",
+    "leave": "退出房间",
+    "leaving": "正在退出…",
+    "joining": "正在加入房间…"
   }
 }

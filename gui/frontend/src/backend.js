@@ -12,6 +12,9 @@ export const renameRoom = (code, name) => app().RenameRoom(code, name)
 export const setRoomPassword = (code, password) => app().SetRoomPassword(code, password)
 export const deleteRoom = (code) => app().DeleteRoom(code)
 
+export const join = (code, password) => app().Join(code, password)
+export const leave = () => app().Leave()
+
 // copyText puts text on the system clipboard through the Wails runtime.
 export async function copyText(text) {
   if (window.runtime?.ClipboardSetText && (await window.runtime.ClipboardSetText(text))) return
