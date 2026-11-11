@@ -28,7 +28,8 @@ onMounted(refresh)
       <button class="button" type="button" @click="refresh">{{ t('common.retry') }}</button>
     </div>
     <p v-else-if="!current" class="notice">{{ t('common.loading') }}</p>
-    <HomeView v-else-if="current.state !== 'logged_out'" :status="current" @status="current = $event" />
+    <HomeView v-else-if="current.state !== 'logged_out'" :status="current"
+              @status="current = $event" @refresh="refresh" />
     <LoginView v-else :status="current" @logged-in="current = $event" />
   </main>
 </template>

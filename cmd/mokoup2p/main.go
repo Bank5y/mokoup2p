@@ -23,6 +23,9 @@ const usage = `用法：mokoup2p <命令> [参数]
   server [地址]          查看或设置服务端地址，例如 https://p2p.example.com
   login [-u 用户名]      登录（密码从终端读取）
   status                 查看登录状态
+  passwd                 修改密码（旧密码和新密码从终端读取）
+  device-name [名称]     查看或修改设备名
+  logout                 退出登录
   room create [-p] 名称  创建房间（-p：设置房间密码，从终端读取）
   room list              列出我的房间
   join [-p] 房间号       加入房间（需要时从终端读取房间密码；-p：直接输入）
@@ -46,6 +49,12 @@ func main() {
 		err = cmdLogin(ctx, client, os.Args[2:])
 	case "status":
 		err = cmdStatus(ctx, client)
+	case "passwd":
+		err = cmdPasswd(ctx, client)
+	case "device-name":
+		err = cmdDeviceName(ctx, client, os.Args[2:])
+	case "logout":
+		err = cmdLogout(ctx, client)
 	case "room":
 		err = cmdRoom(ctx, client, os.Args[2:])
 	case "join":
@@ -123,9 +132,67 @@ func readPassword(in *bufio.Reader, prompt string) (string, error) {
 	}
 	line, err := in.ReadString('\n')
 	if err != nil && line == "" {
-		return "", err
+		return "", inputError("未能读取输入")
 	}
 	return strings.TrimRight(line, "\r\n"), nil
+}
+
+func cmdPasswd(ctx context.Context, c *ipc.Client) error {
+	if st, err := c.Status(ctx); err != nil {
+		return err
+	} else if st.State == ipc.StateLoggedOut {
+		return &api.Error{Code: ipc.ErrNotLoggedIn}
+	}
+	in := bufio.NewReader(os.Stdin)
+	oldPassword, err := readPassword(in, "旧密码：")
+	if err != nil {
+		return err
+	}
+	newPassword, err := readPassword(in, "新密码：")
+	if err != nil {
+		return err
+	}
+	again, err := readPassword(in, "再次输入新密码：")
+	if err != nil {
+		return err
+	}
+	if newPassword != again {
+		return inputError("两次输入的新密码不一致")
+	}
+	if newPassword == "" {
+		return inputError("新密码不能为空")
+	}
+	if err := c.ChangePassword(ctx, oldPassword, newPassword); err != nil {
+		if api.CodeOf(err) == api.ErrInvalidCredentials {
+			return inputError("旧密码错误")
+		}
+		return err
+	}
+	fmt.Println("密码已修改")
+	return nil
+}
+
+func cmdDeviceName(ctx context.Context, c *ipc.Client, args []string) error {
+	var st ipc.Status
+	var err error
+	if len(args) == 0 {
+		st, err = c.Status(ctx)
+	} else {
+		st, err = c.SetDeviceName(ctx, strings.Join(args, " "))
+	}
+	if err != nil {
+		return err
+	}
+	fmt.Println("设备名：" + st.DeviceName)
+	return nil
+}
+
+func cmdLogout(ctx context.Context, c *ipc.Client) error {
+	if _, err := c.Logout(ctx); err != nil {
+		return err
+	}
+	fmt.Println("已退出登录")
+	return nil
 }
 
 func cmdStatus(ctx context.Context, c *ipc.Client) error {
@@ -177,7 +244,16 @@ var messages = map[api.ErrorCode]string{
 	ipc.ErrEngineFailed:        "网络组件启动失败，已退出房间",
 }
 
+// inputError is a mistake in what the user typed, reported as is.
+type inputError string
+
+func (e inputError) Error() string { return string(e) }
+
 func describe(err error) string {
+	var inErr inputError
+	if errors.As(err, &inErr) {
+		return string(inErr)
+	}
 	var apiErr *api.Error
 	if errors.As(err, &apiErr) {
 		if msg, ok := messages[apiErr.Code]; ok {

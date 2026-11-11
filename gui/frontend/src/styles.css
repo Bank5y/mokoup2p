@@ -12,6 +12,8 @@
   --color-on-primary: #ffffff;
   --color-error: #dc2626;
   --color-error-bg: #fef2f2;
+  --color-ok: #15803d;
+  --color-ok-bg: #f0fdf4;
 
   --radius: 4px;
   --space-1: 4px;
@@ -179,6 +181,30 @@ body { margin: 0; }
 .inline-form { display: flex; align-items: center; gap: var(--space-2); }
 .inline-form .input { flex: 1; }
 .inline-form-text { flex: 1; }
+
+/* Pages after login */
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-4) var(--space-8);
+}
+.page > .form, .page > .notice, .page > .table { margin-bottom: var(--space-4); }
+.section-title { margin: var(--space-6) 0 var(--space-3); font-size: 16px; font-weight: 600; }
+.page > .section-title:first-child { margin-top: var(--space-2); }
+.field-hint { color: var(--color-text-muted); font-size: 12px; }
+.form-inline { flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.notice-ok { color: var(--color-ok); background: var(--color-ok-bg); }
+.text-error { color: var(--color-error); }
+.button-danger:hover:not(:disabled) { background: var(--color-error-bg); }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+.table th { color: var(--color-text-muted); font-weight: 400; }
+.table .actions { flex-wrap: wrap; gap: var(--space-1); }
 
 /* Current room facts: label / value rows. */
 .room-facts {

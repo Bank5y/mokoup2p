@@ -78,10 +78,16 @@ func TestDisabledAccountCannotJoin(t *testing.T) {
 	alice := mustLoginAs(t, s, "alice")
 
 	s.DisableUser(t, "alice")
-	_, err := join(s, alice, room.Code, "")
 
+	// Disabling revokes the account's sessions, so the join is refused as
+	// unauthenticated, and logging in again names the reason.
+	_, err := join(s, alice, room.Code, "")
+	if code := servertest.ErrorCode(err); code != api.ErrTokenInvalid {
+		t.Fatalf("join: want %s, got %v", api.ErrTokenInvalid, err)
+	}
+	_, err = s.Login("alice", "alice-password", "alice-dev")
 	if code := servertest.ErrorCode(err); code != api.ErrAccountDisabled {
-		t.Fatalf("want %s, got %v", api.ErrAccountDisabled, err)
+		t.Fatalf("login: want %s, got %v", api.ErrAccountDisabled, err)
 	}
 }
 

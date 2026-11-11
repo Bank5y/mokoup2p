@@ -5,7 +5,6 @@ import (
 	"net/netip"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/Bank5y/mokoup2p/api"
 	"github.com/Bank5y/mokoup2p/client/daemontest"
@@ -245,10 +244,9 @@ func TestEngineStopsWhenSessionIsRejected(t *testing.T) {
 	room := ownerCreatesRoom(t, s, "lan party", "")
 	mustJoinRoom(t, d, room.Code, "")
 
-	// The account is disabled; the next server call finds the access token
-	// expired and the refresh token rejected.
+	// Disabling the account revokes its sessions: the next server call is
+	// rejected, and so is the attempt to renew the session.
 	s.DisableUser(t, "alice")
-	s.Clock.Advance(16 * time.Minute)
 	if _, err := d.IPC.MyRooms(ctx); err == nil {
 		t.Fatal("my rooms succeeded for a disabled account")
 	}
@@ -260,6 +258,26 @@ func TestEngineStopsWhenSessionIsRejected(t *testing.T) {
 	if st := mustStatus(t, d); st.State != ipc.StateLoggedOut || st.Room != nil {
 		t.Fatalf("want logged out and in no room, got %+v", st)
 	}
+}
+
+func TestLogoutLeavesTheRoom(t *testing.T) {
+	s, d := loggedInPair(t)
+	room := ownerCreatesRoom(t, s, "lan party", "")
+	other := ownerCreatesRoom(t, s, "other", "")
+	mustJoinRoom(t, d, room.Code, "")
+
+	st, err := d.IPC.Logout(ctx)
+	if err != nil {
+		t.Fatalf("logout: %v", err)
+	}
+
+	if st.State != ipc.StateLoggedOut || st.Room != nil {
+		t.Fatalf("want logged out and in no room, got %+v", st)
+	}
+	if _, running := d.Engine.Running(); running {
+		t.Fatal("engine still running after logout")
+	}
+	assertDeviceInNoRoom(t, s, d, other)
 }
 
 func mustJoinRoom(t *testing.T, d *daemontest.Daemon, code, password string) ipc.Status {

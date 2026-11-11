@@ -72,7 +72,7 @@ func (c *serverClient) send(ctx context.Context, method, url, accessToken string
 		}
 		return apiErr
 	}
-	if out == nil {
+	if out == nil || resp.StatusCode == http.StatusNoContent {
 		return nil
 	}
 	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
