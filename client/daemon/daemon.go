@@ -49,6 +49,11 @@ type Daemon struct {
 
 	renewMu sync.Mutex // serializes access token renewal
 
+	roomMu  sync.Mutex // serializes joining and leaving rooms
+	joining bool
+	room    *ipc.CurrentRoom  // the room this device is in, nil when not in one
+	network api.NetworkConfig // the network configuration of room
+
 	// serverDeviceName is the device name the server last reported.
 	serverDeviceName string
 }
@@ -71,6 +76,7 @@ func New(cfg Config) (*Daemon, error) {
 	mux.HandleFunc("POST "+ipc.PathLogin, d.handleLogin)
 	d.accountRoutes(mux)
 	d.roomRoutes(mux)
+	d.membershipRoutes(mux)
 	d.http = &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	return d, nil
 }
@@ -129,10 +135,14 @@ func (d *Daemon) Serve(l net.Listener) error {
 	return err
 }
 
+// Close leaves the current room (stopping the engine) and stops serving.
 func (d *Daemon) Close() error {
 	if d.stop != nil {
 		d.stop()
 	}
+	leaveCtx, cancelLeave := context.WithTimeout(context.Background(), 10*time.Second)
+	d.leaveRoom(leaveCtx, true)
+	cancelLeave()
 	d.background.Wait()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -195,6 +205,14 @@ func (d *Daemon) status() ipc.Status {
 		st.State = ipc.StateIdle
 		st.Username = d.user.Username
 		st.IsAdmin = d.user.IsAdmin
+		switch {
+		case d.room != nil:
+			st.State = ipc.StateInRoom
+			room := *d.room
+			st.Room = &room
+		case d.joining:
+			st.State = ipc.StateJoining
+		}
 	}
 	return st
 }
@@ -218,6 +236,10 @@ func (d *Daemon) handleSetServer(w http.ResponseWriter, r *http.Request) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if serverURL != d.saved.ServerURL {
+		if d.joining || d.room != nil {
+			writeError(w, errInRoom)
+			return
+		}
 		// A session belongs to one server; switching servers logs out.
 		d.saved.ServerURL = serverURL
 		d.saved.RefreshToken = ""

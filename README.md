@@ -23,7 +23,7 @@
 ADMIN_USERNAME=admin ADMIN_PASSWORD=change-me docker compose -f deploy/docker-compose.yml up -d
 ```
 
-首次启动时若不存在管理员，会按 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 创建；之后可以不再提供。数据保存在 `server-data` 数据卷中。服务端只提供 HTTP，请在前面放置反向代理（如 Caddy）提供 HTTPS。
+首次启动时若不存在管理员，会按 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 创建；之后可以不再提供。数据保存在 `server-data` 数据卷中。`MOKOUP2P_RELAY_PEERS` 是下发给设备的中转节点地址（逗号分隔，例如 `tcp://p2p.example.com:11010`）。服务端只提供 HTTP，请在前面放置反向代理（如 Caddy）提供 HTTPS。
 
 ## 客户端（Linux）
 
@@ -37,6 +37,8 @@ bin/mokoup2p passwd                   # 修改密码
 bin/mokoup2p device-name 客厅电脑     # 修改设备名
 bin/mokoup2p room create 开黑            # 加 -p 可设置房间密码
 bin/mokoup2p room list
+bin/mokoup2p join K7QH-3MXP            # 房间有密码时会提示输入
+bin/mokoup2p leave
 bin/mokoup2p logout
 ```
 

@@ -129,7 +129,12 @@ func (s *Server) handleSetDisabled(w http.ResponseWriter, r *http.Request, _ ses
 		if err := ensureOtherAdmin(tx, id); err != nil {
 			return err
 		}
-		_, err := tx.Exec(`DELETE FROM tokens WHERE device_pk IN (SELECT id FROM devices WHERE user_id = ?)`, id)
+		if _, err := tx.Exec(`DELETE FROM tokens WHERE device_pk IN (SELECT id FROM devices WHERE user_id = ?)`, id); err != nil {
+			return err
+		}
+		// The user's devices leave their rooms. Telling them and the other
+		// members is the realtime ticket's job (#7).
+		_, err := tx.Exec(`DELETE FROM memberships WHERE device_pk IN (SELECT id FROM devices WHERE user_id = ?)`, id)
 		return err
 	}, `UPDATE users SET disabled = ? WHERE id = ?`, req.Disabled, id)
 	s.respondUser(w, err, id)

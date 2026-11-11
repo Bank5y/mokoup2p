@@ -12,6 +12,8 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       MOKOUP2P_LISTEN: ":8080"
       MOKOUP2P_DB: /data/mokoup2p.db
+      # Relay node addresses handed to devices, comma-separated.
+      MOKOUP2P_RELAY_PEERS: ${MOKOUP2P_RELAY_PEERS:-}
     ports:
       - "${MOKOUP2P_PORT:-8080}:8080"
     volumes:

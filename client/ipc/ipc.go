@@ -44,6 +44,8 @@ type Status struct {
 	IsAdmin    bool   `json:"isAdmin,omitempty"`
 	DeviceID   string `json:"deviceId"`
 	DeviceName string `json:"deviceName"`
+	// Room is set in StateInRoom.
+	Room *CurrentRoom `json:"room,omitempty"`
 }
 
 type SetServerRequest struct {

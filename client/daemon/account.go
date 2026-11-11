@@ -21,8 +21,14 @@ func (d *Daemon) accountRoutes(mux *http.ServeMux) {
 	mux.HandleFunc(ipc.PathAdminUsers+"/", d.handleAdminRelay)
 }
 
-// logOutLocally forgets the session; d.mu must be held.
+// logOutLocally forgets the session; d.mu must be held. A room the device is
+// in is left in the background (stopping the engine) without telling the
+// server, which no longer accepts this device's tokens; callers that still
+// can should leave the room first.
 func (d *Daemon) logOutLocally() error {
+	if d.room != nil {
+		d.leaveRoomInBackground(false)
+	}
 	d.saved.RefreshToken = ""
 	d.loggedIn = false
 	d.user = api.User{}
@@ -102,6 +108,7 @@ func (d *Daemon) handleSetDeviceName(w http.ResponseWriter, r *http.Request) {
 func (d *Daemon) handleLogout(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
+	d.leaveRoom(ctx, true)
 	if err := d.serverCall(ctx, http.MethodPost, api.PathLogout, nil, nil); err != nil && api.CodeOf(err) != ipc.ErrNotLoggedIn {
 		log.Printf("logout on server: %v", err)
 	}

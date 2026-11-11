@@ -56,11 +56,7 @@ func (d *Daemon) renewSession(ctx context.Context, stale string) (string, error)
 	}
 	if err != nil {
 		if code := api.CodeOf(err); code == api.ErrTokenInvalid || code == api.ErrAccountDisabled {
-			d.saved.RefreshToken = ""
-			d.loggedIn = false
-			d.user = api.User{}
-			d.accessToken = ""
-			if saveErr := saveState(d.cfg.StateDir, d.saved); saveErr != nil {
+			if saveErr := d.logOutLocally(); saveErr != nil {
 				return "", saveErr
 			}
 		}

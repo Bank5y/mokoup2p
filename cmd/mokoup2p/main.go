@@ -28,6 +28,8 @@ const usage = `用法：mokoup2p <命令> [参数]
   logout                 退出登录
   room create [-p] 名称  创建房间（-p：设置房间密码，从终端读取）
   room list              列出我的房间
+  join [-p] 房间号       加入房间（需要时从终端读取房间密码；-p：直接输入）
+  leave                  退出当前房间
 `
 
 func main() {
@@ -55,6 +57,10 @@ func main() {
 		err = cmdLogout(ctx, client)
 	case "room":
 		err = cmdRoom(ctx, client, os.Args[2:])
+	case "join":
+		err = cmdJoin(ctx, client, os.Args[2:])
+	case "leave":
+		err = cmdLeave(ctx, client)
 	case "-h", "--help", "help":
 		fmt.Print(usage)
 	default:
@@ -207,6 +213,12 @@ func cmdStatus(ctx context.Context, c *ipc.Client) error {
 			role = "，管理员"
 		}
 		fmt.Printf("状态：已登录（%s%s），未在房间中\n", st.Username, role)
+	case ipc.StateJoining:
+		fmt.Printf("状态：已登录（%s），正在加入房间…\n", st.Username)
+	case ipc.StateInRoom:
+		fmt.Printf("状态：已登录（%s），在房间中\n", st.Username)
+		fmt.Printf("房间：%s（%s）\n", st.Room.Name, st.Room.Code)
+		fmt.Printf("本机虚拟 IP：%s（网段 %s）\n", st.Room.VirtualIP, st.Room.Subnet)
 	default:
 		fmt.Println("状态：未登录")
 	}
@@ -225,6 +237,11 @@ var messages = map[api.ErrorCode]string{
 	api.ErrRoomNotFound:        "房间不存在",
 	api.ErrRoomLimitReached:    "房间数已达上限",
 	api.ErrNotRoomOwner:        "只有房主可以这样做",
+	api.ErrRoomPasswordWrong:   "房间密码错误",
+	api.ErrRoomFull:            "房间已满",
+	api.ErrInOtherRoom:         "本设备已在其他房间中，请先退出",
+	ipc.ErrInRoom:              "本设备已在房间中，请先运行 mokoup2p leave 退出",
+	ipc.ErrEngineFailed:        "网络组件启动失败，已退出房间",
 }
 
 // inputError is a mistake in what the user typed, reported as is.

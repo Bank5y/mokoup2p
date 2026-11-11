@@ -21,6 +21,8 @@ import (
 const (
 	AdminUsername = "admin"
 	AdminPassword = "admin-password"
+	// RelayPeer is the relay node address the test server hands out.
+	RelayPeer = "tcp://relay.test:11010"
 )
 
 type Server struct {
@@ -61,6 +63,7 @@ func (s *Server) start(t testing.TB, adminUsername, adminPassword string) {
 		Clock:         s.Clock,
 		AdminUsername: adminUsername,
 		AdminPassword: adminPassword,
+		RelayPeers:    []string{RelayPeer},
 	})
 	if err != nil {
 		t.Fatalf("start server: %v", err)
@@ -153,6 +156,29 @@ func (s *Server) AddUser(t testing.TB, username, password string) int64 {
 		t.Fatalf("add user %q: %v", username, err)
 	}
 	return u.ID
+}
+
+// DisableUser disables a user through the administrator API.
+func (s *Server) DisableUser(t testing.TB, username string) {
+	t.Helper()
+	admin, err := s.Login(AdminUsername, AdminPassword, "servertest-admin")
+	if err != nil {
+		t.Fatalf("disable user %q: log in as administrator: %v", username, err)
+	}
+	var users []api.AdminUser
+	if err := s.Do(http.MethodGet, api.PathAdminUsers, admin.AccessToken, nil, &users); err != nil {
+		t.Fatalf("disable user %q: list users: %v", username, err)
+	}
+	for _, u := range users {
+		if u.Username == username {
+			err := s.Do(http.MethodPut, api.PathAdminUser(u.ID)+api.AdminUserDisabled, admin.AccessToken, api.SetDisabledRequest{Disabled: true}, nil)
+			if err != nil {
+				t.Fatalf("disable user %q: %v", username, err)
+			}
+			return
+		}
+	}
+	t.Fatalf("disable user %q: no such user", username)
 }
 
 // ErrorCode returns the API error code of err, or "" if err is not an API error.
