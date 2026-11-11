@@ -4,6 +4,7 @@ package servertest
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,6 +13,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/Bank5y/mokoup2p/api"
 	"github.com/Bank5y/mokoup2p/internal/clock"
@@ -137,6 +140,25 @@ func (s *Server) Login(username, password, deviceID string) (api.Session, error)
 		Username: username, Password: password, DeviceID: deviceID, DeviceName: deviceID + "-host",
 	}, &sess)
 	return sess, err
+}
+
+// AddUser creates an ordinary user. It writes the database directly because
+// the admin API for creating users lives in another ticket (#3); switch to
+// that API once it exists.
+func (s *Server) AddUser(t testing.TB, username, password string) {
+	t.Helper()
+	db, err := sql.Open("sqlite", "file:"+s.dbPath+"?_pragma=busy_timeout(5000)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO users (username, password_hash) VALUES (?, ?)`, username, string(hash)); err != nil {
+		t.Fatalf("add user %q: %v", username, err)
+	}
 }
 
 // ErrorCode returns the API error code of err, or "" if err is not an API error.
