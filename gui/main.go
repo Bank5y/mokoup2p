@@ -24,8 +24,18 @@ func main() {
 		MinHeight:        480,
 		AssetServer:      &assetserver.Options{Assets: assets},
 		BackgroundColour: &options.RGBA{R: 255, G: 255, B: 255, A: 255},
-		OnStartup:        app.startup,
-		Bind:             []interface{}{app},
+		// With a tray, × hides the window to the tray and the device stays in
+		// its room. Without one (e.g. stock GNOME) × closes the GUI so the
+		// window can't get lost; the daemon still keeps the room.
+		HideWindowOnClose: app.tray,
+		// Launching the GUI again brings the hidden window back.
+		SingleInstanceLock: &options.SingleInstanceLock{
+			UniqueId:               "mokoup2p-gui",
+			OnSecondInstanceLaunch: func(options.SecondInstanceData) { app.showWindow() },
+		},
+		OnStartup:  app.startup,
+		OnShutdown: app.shutdown,
+		Bind:       []interface{}{app},
 	})
 	if err != nil {
 		log.Fatal(err)

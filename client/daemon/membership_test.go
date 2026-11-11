@@ -169,6 +169,42 @@ func TestStatusShowsJoiningWhileEngineStarts(t *testing.T) {
 	}
 }
 
+// The GUI's tray "退出" calls Leave and then exits, possibly while a join is
+// still under way. The daemon must still end up idle, with the engine stopped
+// and the membership ended.
+func TestLeaveWhileJoiningEndsIdle(t *testing.T) {
+	s, d := loggedInPair(t)
+	room := ownerCreatesRoom(t, s, "lan party", "")
+	other := ownerCreatesRoom(t, s, "other", "")
+	release := d.Engine.HoldStart()
+	defer release()
+
+	joined := make(chan error, 1)
+	go func() {
+		_, err := d.IPC.Join(ctx, room.Code, "")
+		joined <- err
+	}()
+	waitFor(t, func() bool { return mustStatus(t, d).State == ipc.StateJoining })
+	left := make(chan ipc.Status, 1)
+	go func() {
+		st, err := d.IPC.Leave(ctx)
+		if err != nil {
+			t.Errorf("leave: %v", err)
+		}
+		left <- st
+	}()
+	release()
+
+	<-joined
+	if st := <-left; st.State != ipc.StateIdle || st.Room != nil {
+		t.Fatalf("want idle after leave, got %+v", st)
+	}
+	if _, running := d.Engine.Running(); running {
+		t.Fatal("engine still running after leave")
+	}
+	assertDeviceInNoRoom(t, s, d, other)
+}
+
 func TestEngineStartFailureLeavesTheRoomAgain(t *testing.T) {
 	s, d := loggedInPair(t)
 	room := ownerCreatesRoom(t, s, "lan party", "")
