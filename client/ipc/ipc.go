@@ -123,7 +123,7 @@ func (c *Client) do(ctx context.Context, method, path string, in, out any) error
 		}
 		return apiErr
 	}
-	if out != nil {
+	if out != nil && resp.StatusCode != http.StatusNoContent {
 		return json.NewDecoder(resp.Body).Decode(out)
 	}
 	return nil

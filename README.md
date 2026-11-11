@@ -33,9 +33,14 @@ bin/mokoup2pd &                       # 后台服务
 bin/mokoup2p server https://p2p.example.com
 bin/mokoup2p login -u alice
 bin/mokoup2p status
+bin/mokoup2p passwd                   # 修改密码
+bin/mokoup2p device-name 客厅电脑     # 修改设备名
 bin/mokoup2p room create 开黑            # 加 -p 可设置房间密码
 bin/mokoup2p room list
+bin/mokoup2p logout
 ```
+
+用户由管理员在 GUI 的"用户管理"页新增、重置密码、禁用、删除或设为管理员。
 
 ## GUI
 

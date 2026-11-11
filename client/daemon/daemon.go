@@ -48,6 +48,9 @@ type Daemon struct {
 	accessToken string
 
 	renewMu sync.Mutex // serializes access token renewal
+
+	// serverDeviceName is the device name the server last reported.
+	serverDeviceName string
 }
 
 func New(cfg Config) (*Daemon, error) {
@@ -66,6 +69,7 @@ func New(cfg Config) (*Daemon, error) {
 	mux.HandleFunc("GET "+ipc.PathStatus, d.handleStatus)
 	mux.HandleFunc("PUT "+ipc.PathServer, d.handleSetServer)
 	mux.HandleFunc("POST "+ipc.PathLogin, d.handleLogin)
+	d.accountRoutes(mux)
 	d.roomRoutes(mux)
 	d.http = &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	return d, nil
@@ -82,6 +86,7 @@ func (d *Daemon) Start(ctx context.Context) {
 	ctx, d.stop = context.WithCancel(context.WithoutCancel(ctx))
 	err := d.autoLogin(ctx)
 	if err == nil {
+		d.syncDeviceName(ctx)
 		return
 	}
 	log.Printf("auto login: %v", err)
@@ -106,6 +111,8 @@ func (d *Daemon) retryAutoLogin(ctx context.Context) {
 		if api.CodeOf(err) != ipc.ErrServerUnreachable {
 			if err != nil {
 				log.Printf("auto login: %v", err)
+			} else {
+				d.syncDeviceName(ctx)
 			}
 			return
 		}
@@ -172,6 +179,7 @@ func (d *Daemon) acceptSession(sess api.Session) error {
 	d.loggedIn = true
 	d.user = sess.User
 	d.accessToken = sess.AccessToken
+	d.serverDeviceName = sess.Device.Name
 	return nil
 }
 
@@ -257,15 +265,20 @@ func (d *Daemon) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	d.mu.Lock()
-	defer d.mu.Unlock()
 	if d.saved.ServerURL != saved.ServerURL {
+		d.mu.Unlock()
 		writeError(w, &api.Error{Code: api.ErrBadRequest, Message: "server address changed during login"})
 		return
 	}
-	if err := d.acceptSession(sess); err != nil {
+	err = d.acceptSession(sess)
+	d.mu.Unlock()
+	if err != nil {
 		writeError(w, err)
 		return
 	}
+	d.syncDeviceName(r.Context())
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	writeJSON(w, http.StatusOK, d.status())
 }
 
