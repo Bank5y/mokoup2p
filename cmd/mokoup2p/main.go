@@ -23,6 +23,8 @@ const usage = `用法：mokoup2p <命令> [参数]
   server [地址]          查看或设置服务端地址，例如 https://p2p.example.com
   login [-u 用户名]      登录（密码从终端读取）
   status                 查看登录状态
+  room create [-p] 名称  创建房间（-p：设置房间密码，从终端读取）
+  room list              列出我的房间
 `
 
 func main() {
@@ -42,6 +44,8 @@ func main() {
 		err = cmdLogin(ctx, client, os.Args[2:])
 	case "status":
 		err = cmdStatus(ctx, client)
+	case "room":
+		err = cmdRoom(ctx, client, os.Args[2:])
 	case "-h", "--help", "help":
 		fmt.Print(usage)
 	default:
@@ -92,7 +96,7 @@ func cmdLogin(ctx context.Context, c *ipc.Client, args []string) error {
 		}
 		*username = strings.TrimSpace(line)
 	}
-	password, err := readPassword(in)
+	password, err := readPassword(in, "密码：")
 	if err != nil {
 		return err
 	}
@@ -104,8 +108,8 @@ func cmdLogin(ctx context.Context, c *ipc.Client, args []string) error {
 	return nil
 }
 
-func readPassword(in *bufio.Reader) (string, error) {
-	fmt.Print("密码：")
+func readPassword(in *bufio.Reader, prompt string) (string, error) {
+	fmt.Print(prompt)
 	if term.IsTerminal(int(os.Stdin.Fd())) {
 		b, err := term.ReadPassword(int(os.Stdin.Fd()))
 		fmt.Println()
@@ -150,6 +154,10 @@ var messages = map[api.ErrorCode]string{
 	ipc.ErrServerNotConfigured: "尚未设置服务端地址，请先运行 mokoup2p server <地址>",
 	ipc.ErrServerUnreachable:   "无法连接服务端",
 	ipc.ErrServerBadResponse:   "服务端响应异常，请检查服务端地址",
+	ipc.ErrNotLoggedIn:         "尚未登录，请先运行 mokoup2p login",
+	api.ErrRoomNotFound:        "房间不存在",
+	api.ErrRoomLimitReached:    "房间数已达上限",
+	api.ErrNotRoomOwner:        "只有房主可以这样做",
 }
 
 func describe(err error) string {

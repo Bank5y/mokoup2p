@@ -33,6 +33,8 @@ bin/mokoup2pd &                       # 后台服务
 bin/mokoup2p server https://p2p.example.com
 bin/mokoup2p login -u alice
 bin/mokoup2p status
+bin/mokoup2p room create 开黑            # 加 -p 可设置房间密码
+bin/mokoup2p room list
 ```
 
 ## GUI
