@@ -74,6 +74,8 @@
     "room_not_found": "房间不存在",
     "room_limit_reached": "房间数已达上限",
     "not_room_owner": "只有房主可以这样做",
+    "not_room_member": "只有房间成员、房主和管理员可以查看成员",
+    "not_in_room": "当前未在房间中",
     "copy_failed": "复制失败，请手动复制",
     "daemon_unreachable": "无法连接后台服务，请确认 mokoup2pd 正在运行",
     "forbidden": "只有管理员可以执行此操作",
@@ -151,6 +153,11 @@
     "owner": "房主",
     "leave": "退出房间",
     "leaving": "正在退出…",
-    "joining": "正在加入房间…"
+    "joining": "正在加入房间…",
+    "disconnected": "与服务端的连接已断开，正在重连…",
+    "membersTitle": "成员（{count}）",
+    "colMember": "用户名 / 设备名",
+    "colVirtualIp": "虚拟 IP",
+    "self": "本机"
   }
 }

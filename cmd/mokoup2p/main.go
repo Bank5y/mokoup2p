@@ -30,6 +30,7 @@ const usage = `用法：mokoup2p <命令> [参数]
   room list              列出我的房间
   join [-p] 房间号       加入房间（需要时从终端读取房间密码；-p：直接输入）
   leave                  退出当前房间
+  members [-w]           列出当前房间的成员（-w：持续显示并实时刷新）
 `
 
 func main() {
@@ -61,6 +62,8 @@ func main() {
 		err = cmdJoin(ctx, client, os.Args[2:])
 	case "leave":
 		err = cmdLeave(ctx, client)
+	case "members":
+		err = cmdMembers(ctx, client, os.Args[2:])
 	case "-h", "--help", "help":
 		fmt.Print(usage)
 	default:
@@ -221,6 +224,12 @@ func cmdStatus(ctx context.Context, c *ipc.Client) error {
 		fmt.Printf("本机虚拟 IP：%s（网段 %s）\n", st.Room.VirtualIP, st.Room.Subnet)
 	default:
 		fmt.Println("状态：未登录")
+		return nil
+	}
+	if st.Connected {
+		fmt.Println("实时连接：已连接")
+	} else {
+		fmt.Println("实时连接：已断开，正在重连…")
 	}
 	return nil
 }
@@ -242,6 +251,8 @@ var messages = map[api.ErrorCode]string{
 	api.ErrInOtherRoom:         "本设备已在其他房间中，请先退出",
 	ipc.ErrInRoom:              "本设备已在房间中，请先运行 mokoup2p leave 退出",
 	ipc.ErrEngineFailed:        "网络组件启动失败，已退出房间",
+	ipc.ErrNotInRoom:           "当前未在房间中",
+	api.ErrNotRoomMember:       "只有房间成员、房主和管理员可以查看成员",
 }
 
 // inputError is a mistake in what the user typed, reported as is.
