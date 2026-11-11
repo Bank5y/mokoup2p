@@ -56,6 +56,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST "+api.PathLogin, s.handleLogin)
 	s.mux.HandleFunc("POST "+api.PathRefresh, s.handleRefresh)
 	s.mux.HandleFunc("GET "+api.PathMe, s.authenticated(s.handleMe))
+	s.accountRoutes()
 }
 
 func openDB(path string) (*sql.DB, error) {

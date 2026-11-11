@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -33,19 +34,32 @@ func (c *serverClient) refresh(ctx context.Context, baseURL, refreshToken string
 	return sess, err
 }
 
-// post returns *api.Error for server-reported failures, ipc.ErrServerUnreachable
-// when the server cannot be reached, and ipc.ErrServerBadResponse when
-// something answered that is not a mokoup2p server (e.g. a proxy error page).
 func (c *serverClient) post(ctx context.Context, url string, in, out any) error {
-	body, err := json.Marshal(in)
-	if err != nil {
-		return err
+	return c.send(ctx, http.MethodPost, url, "", in, out)
+}
+
+// send makes a request, authenticated if accessToken is set. in and out may
+// be nil. It returns *api.Error for server-reported failures,
+// ipc.ErrServerUnreachable when the server cannot be reached, and
+// ipc.ErrServerBadResponse when something answered that is not a mokoup2p
+// server (e.g. a proxy error page).
+func (c *serverClient) send(ctx context.Context, method, url, accessToken string, in, out any) error {
+	var body io.Reader = http.NoBody
+	if in != nil {
+		data, err := json.Marshal(in)
+		if err != nil {
+			return err
+		}
+		body = bytes.NewReader(data)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if accessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+	}
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return &api.Error{Code: ipc.ErrServerUnreachable, Message: err.Error()}
@@ -57,6 +71,9 @@ func (c *serverClient) post(ctx context.Context, url string, in, out any) error 
 			return &api.Error{Code: ipc.ErrServerBadResponse, Message: fmt.Sprintf("unexpected response status %d", resp.StatusCode)}
 		}
 		return apiErr
+	}
+	if out == nil || resp.StatusCode == http.StatusNoContent {
+		return nil
 	}
 	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
 		return &api.Error{Code: ipc.ErrServerBadResponse, Message: "invalid response from server"}
