@@ -57,6 +57,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST "+api.PathRefresh, s.handleRefresh)
 	s.mux.HandleFunc("GET "+api.PathMe, s.authenticated(s.handleMe))
 	s.accountRoutes()
+	s.roomRoutes()
 }
 
 func openDB(path string) (*sql.DB, error) {
@@ -66,9 +67,11 @@ func openDB(path string) (*sql.DB, error) {
 		return nil, err
 	}
 	db.SetMaxOpenConns(1)
-	if _, err := db.Exec(schema); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("migrate: %w", err)
+	for _, ddl := range []string{schema, settingsSchema, roomSchema} {
+		if _, err := db.Exec(ddl); err != nil {
+			db.Close()
+			return nil, fmt.Errorf("migrate: %w", err)
+		}
 	}
 	return db, nil
 }

@@ -26,6 +26,8 @@ const usage = `用法：mokoup2p <命令> [参数]
   passwd                 修改密码（旧密码和新密码从终端读取）
   device-name [名称]     查看或修改设备名
   logout                 退出登录
+  room create [-p] 名称  创建房间（-p：设置房间密码，从终端读取）
+  room list              列出我的房间
 `
 
 func main() {
@@ -51,6 +53,8 @@ func main() {
 		err = cmdDeviceName(ctx, client, os.Args[2:])
 	case "logout":
 		err = cmdLogout(ctx, client)
+	case "room":
+		err = cmdRoom(ctx, client, os.Args[2:])
 	case "-h", "--help", "help":
 		fmt.Print(usage)
 	default:
@@ -218,6 +222,9 @@ var messages = map[api.ErrorCode]string{
 	ipc.ErrServerUnreachable:   "无法连接服务端",
 	ipc.ErrServerBadResponse:   "服务端响应异常，请检查服务端地址",
 	ipc.ErrNotLoggedIn:         "尚未登录，请先运行 mokoup2p login",
+	api.ErrRoomNotFound:        "房间不存在",
+	api.ErrRoomLimitReached:    "房间数已达上限",
+	api.ErrNotRoomOwner:        "只有房主可以这样做",
 }
 
 // inputError is a mistake in what the user typed, reported as is.

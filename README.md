@@ -35,6 +35,8 @@ bin/mokoup2p login -u alice
 bin/mokoup2p status
 bin/mokoup2p passwd                   # 修改密码
 bin/mokoup2p device-name 客厅电脑     # 修改设备名
+bin/mokoup2p room create 开黑            # 加 -p 可设置房间密码
+bin/mokoup2p room list
 bin/mokoup2p logout
 ```
 

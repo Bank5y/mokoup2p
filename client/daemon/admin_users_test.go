@@ -21,7 +21,7 @@ func daemonLoggedInAs(t *testing.T, s *servertest.Server, username, password str
 
 func TestAdministratorManagesUsersThroughDaemon(t *testing.T) {
 	s := servertest.Start(t)
-	admin := loggedInDaemon(t, s)
+	admin := adminDaemon(t, s)
 
 	alice, err := admin.IPC.CreateUser(ctx, "alice", "alice-password")
 	if err != nil {
@@ -61,7 +61,7 @@ func TestAdministratorManagesUsersThroughDaemon(t *testing.T) {
 
 func TestLastAdministratorErrorIsRelayedByDaemon(t *testing.T) {
 	s := servertest.Start(t)
-	admin := loggedInDaemon(t, s)
+	admin := adminDaemon(t, s)
 	users, err := admin.IPC.ListUsers(ctx)
 	if err != nil {
 		t.Fatalf("list: %v", err)
@@ -76,7 +76,7 @@ func TestLastAdministratorErrorIsRelayedByDaemon(t *testing.T) {
 
 func TestNonAdministratorDaemonIsForbiddenFromAdministratorAPI(t *testing.T) {
 	s := servertest.Start(t)
-	admin := loggedInDaemon(t, s)
+	admin := adminDaemon(t, s)
 	if _, err := admin.IPC.CreateUser(ctx, "alice", "alice-password"); err != nil {
 		t.Fatalf("create user: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestNonAdministratorDaemonIsForbiddenFromAdministratorAPI(t *testing.T) {
 
 func TestDisabledUsersDaemonEndsLoggedOut(t *testing.T) {
 	s := servertest.Start(t)
-	admin := loggedInDaemon(t, s)
+	admin := adminDaemon(t, s)
 	created, err := admin.IPC.CreateUser(ctx, "alice", "alice-password")
 	if err != nil {
 		t.Fatalf("create user: %v", err)

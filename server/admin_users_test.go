@@ -167,6 +167,26 @@ func TestAdministratorDeletesUser(t *testing.T) {
 	createUser(t, s, admin.AccessToken, "alice", "another-password")
 }
 
+func TestDeletingUserDeletesTheRoomsTheyOwn(t *testing.T) {
+	s := servertest.Start(t)
+	admin := adminSession(t, s)
+	alice := createUser(t, s, admin.AccessToken, "alice", "alice-password")
+	sess := loginAs(t, s, "alice", "alice-password", "laptop")
+	var room api.Room
+	if err := s.Do(http.MethodPost, api.PathRooms, sess.AccessToken, api.CreateRoomRequest{Name: "开黑"}, &room); err != nil {
+		t.Fatalf("create room: %v", err)
+	}
+
+	if err := s.Do(http.MethodDelete, api.PathAdminUser(alice.ID), admin.AccessToken, nil, nil); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+
+	err := s.Do(http.MethodGet, api.PathRoom(room.Code), admin.AccessToken, nil, nil)
+	if code := servertest.ErrorCode(err); code != api.ErrRoomNotFound {
+		t.Fatalf("the deleted user's room should be gone: want %s, got %v", api.ErrRoomNotFound, err)
+	}
+}
+
 func TestOperationsOnUnknownUserReportUserNotFound(t *testing.T) {
 	s := servertest.Start(t)
 	admin := adminSession(t, s)

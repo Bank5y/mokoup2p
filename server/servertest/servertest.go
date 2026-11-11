@@ -139,5 +139,21 @@ func (s *Server) Login(username, password, deviceID string) (api.Session, error)
 	return sess, err
 }
 
+// AddUser creates an ordinary user through the administrator API and
+// returns its id.
+func (s *Server) AddUser(t testing.TB, username, password string) int64 {
+	t.Helper()
+	admin, err := s.Login(AdminUsername, AdminPassword, "servertest-admin")
+	if err != nil {
+		t.Fatalf("add user %q: log in as administrator: %v", username, err)
+	}
+	var u api.AdminUser
+	err = s.Do(http.MethodPost, api.PathAdminUsers, admin.AccessToken, api.CreateUserRequest{Username: username, Password: password}, &u)
+	if err != nil {
+		t.Fatalf("add user %q: %v", username, err)
+	}
+	return u.ID
+}
+
 // ErrorCode returns the API error code of err, or "" if err is not an API error.
 func ErrorCode(err error) api.ErrorCode { return api.CodeOf(err) }

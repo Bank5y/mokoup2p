@@ -15,7 +15,47 @@
   "home": {
     "loggedInAs": "已登录：{username}",
     "device": "设备：{deviceName}",
-    "empty": "暂无内容"
+    "createRoom": "创建房间"
+  },
+  "nav": {
+    "home": "主页",
+    "myRooms": "我的房间",
+    "settings": "个人设置",
+    "admin": "用户管理"
+  },
+  "room": {
+    "code": "房间号",
+    "copy": "复制",
+    "copied": "已复制",
+    "subnet": "网段：{subnet}",
+    "hasPassword": "有密码",
+    "noPassword": "无密码"
+  },
+  "createRoom": {
+    "title": "创建房间",
+    "name": "房间名称",
+    "password": "房间密码（可选）",
+    "passwordHint": "留空表示不设密码",
+    "submit": "创建",
+    "submitting": "正在创建…",
+    "cancel": "取消",
+    "created": "房间已创建，把房间号发给朋友即可加入",
+    "done": "完成"
+  },
+  "myRooms": {
+    "title": "我的房间",
+    "empty": "你还没有创建房间",
+    "rename": "改名",
+    "password": "房间密码",
+    "delete": "删除",
+    "save": "保存",
+    "cancel": "取消",
+    "newName": "新名称",
+    "newPassword": "新房间密码",
+    "setPassword": "设置密码",
+    "removePassword": "取消密码",
+    "confirmDelete": "确定删除房间「{name}」？此操作不可撤销。",
+    "confirm": "确定删除"
   },
   "common": {
     "loading": "正在连接后台服务…",
@@ -29,19 +69,18 @@
     "server_not_configured": "请先填写服务端地址",
     "server_unreachable": "无法连接服务端，请检查地址和网络",
     "server_bad_response": "服务端响应异常，请检查服务端地址",
+    "not_logged_in": "尚未登录，请先登录",
+    "room_not_found": "房间不存在",
+    "room_limit_reached": "房间数已达上限",
+    "not_room_owner": "只有房主可以这样做",
+    "copy_failed": "复制失败，请手动复制",
     "daemon_unreachable": "无法连接后台服务，请确认 mokoup2pd 正在运行",
-    "not_logged_in": "尚未登录",
     "forbidden": "只有管理员可以执行此操作",
     "user_not_found": "用户不存在",
     "username_taken": "用户名已存在",
     "last_admin": "不能取消、禁用或删除最后一个管理员",
     "internal": "发生内部错误",
     "unknown": "发生未知错误"
-  },
-  "nav": {
-    "home": "首页",
-    "settings": "个人设置",
-    "admin": "用户管理"
   },
   "settings": {
     "deviceTitle": "设备名",

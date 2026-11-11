@@ -21,9 +21,6 @@ const (
 // PathAdminUser is the IPC path of one user; see api.PathAdminUser.
 func PathAdminUser(id int64) string { return PathAdminUsers + "/" + strconv.FormatInt(id, 10) }
 
-// ErrNotLoggedIn is returned for operations that need a logged-in daemon.
-const ErrNotLoggedIn api.ErrorCode = "not_logged_in"
-
 type SetDeviceNameRequest struct {
 	Name string `json:"name"`
 }

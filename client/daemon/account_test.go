@@ -10,7 +10,7 @@ import (
 	"github.com/Bank5y/mokoup2p/server/servertest"
 )
 
-func loggedInDaemon(t *testing.T, s *servertest.Server) *daemontest.Daemon {
+func adminDaemon(t *testing.T, s *servertest.Server) *daemontest.Daemon {
 	t.Helper()
 	d := daemontest.Start(t)
 	mustSetServer(t, d, s)
@@ -20,7 +20,7 @@ func loggedInDaemon(t *testing.T, s *servertest.Server) *daemontest.Daemon {
 
 func TestChangePasswordThroughDaemon(t *testing.T) {
 	s := servertest.Start(t)
-	d := loggedInDaemon(t, s)
+	d := adminDaemon(t, s)
 
 	if err := d.IPC.ChangePassword(ctx, servertest.AdminPassword, "new-password"); err != nil {
 		t.Fatalf("change password: %v", err)
@@ -33,7 +33,7 @@ func TestChangePasswordThroughDaemon(t *testing.T) {
 
 func TestChangePasswordWithWrongOldPasswordReportsInvalidCredentials(t *testing.T) {
 	s := servertest.Start(t)
-	d := loggedInDaemon(t, s)
+	d := adminDaemon(t, s)
 
 	err := d.IPC.ChangePassword(ctx, "wrong", "new-password")
 
@@ -59,7 +59,7 @@ func TestAccountOperationsRequireLogin(t *testing.T) {
 
 func TestRenameDeviceThroughDaemon(t *testing.T) {
 	s := servertest.Start(t)
-	d := loggedInDaemon(t, s)
+	d := adminDaemon(t, s)
 
 	st, err := d.IPC.SetDeviceName(ctx, "客厅电脑")
 	if err != nil {
@@ -104,7 +104,7 @@ func TestRenameDeviceWhileLoggedOutIsUsedAtNextLogin(t *testing.T) {
 
 func TestDeviceRenamedWhileLoggedOutIsSyncedWhenLoggingInAgain(t *testing.T) {
 	s := servertest.Start(t)
-	d := loggedInDaemon(t, s)
+	d := adminDaemon(t, s)
 	if _, err := d.IPC.Logout(ctx); err != nil {
 		t.Fatalf("logout: %v", err)
 	}
@@ -135,7 +135,7 @@ func TestEmptyDeviceNameIsRejectedByDaemon(t *testing.T) {
 
 func TestLogoutReturnsDaemonToLoggedOut(t *testing.T) {
 	s := servertest.Start(t)
-	d := loggedInDaemon(t, s)
+	d := adminDaemon(t, s)
 
 	st, err := d.IPC.Logout(ctx)
 	if err != nil {
@@ -153,7 +153,7 @@ func TestLogoutReturnsDaemonToLoggedOut(t *testing.T) {
 
 func TestLogoutWhileServerUnreachableStillLogsOutLocally(t *testing.T) {
 	s := servertest.Start(t)
-	d := loggedInDaemon(t, s)
+	d := adminDaemon(t, s)
 	s.SetUnreachable(true)
 
 	st, err := d.IPC.Logout(ctx)
@@ -167,7 +167,7 @@ func TestLogoutWhileServerUnreachableStillLogsOutLocally(t *testing.T) {
 
 func TestExpiredAccessTokenIsRefreshedTransparently(t *testing.T) {
 	s := servertest.Start(t)
-	d := loggedInDaemon(t, s)
+	d := adminDaemon(t, s)
 
 	s.Clock.Advance(20 * time.Minute)
 

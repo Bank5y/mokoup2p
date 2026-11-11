@@ -70,6 +70,7 @@ func New(cfg Config) (*Daemon, error) {
 	mux.HandleFunc("PUT "+ipc.PathServer, d.handleSetServer)
 	mux.HandleFunc("POST "+ipc.PathLogin, d.handleLogin)
 	d.accountRoutes(mux)
+	d.roomRoutes(mux)
 	d.http = &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	return d, nil
 }
