@@ -91,6 +91,24 @@ func TestDisabledAccountCannotJoin(t *testing.T) {
 	}
 }
 
+func TestDisablingAUserEndsItsMemberships(t *testing.T) {
+	s := servertest.Start(t)
+	owner := mustLogin(t, s)
+	first := mustCreateRoom(t, s, owner, "first")
+	second := mustCreateRoom(t, s, owner, "second")
+	id := s.AddUser(t, "alice", "alice-password")
+	alice := mustLoginDevice(t, s, "alice", "alice-password", "alice-dev")
+	mustJoin(t, s, alice, first.Code, "")
+
+	s.DisableUser(t, "alice")
+	if err := s.Do(http.MethodPut, api.PathAdminUser(id)+api.AdminUserDisabled, owner.AccessToken, api.SetDisabledRequest{Disabled: false}, nil); err != nil {
+		t.Fatalf("enable alice: %v", err)
+	}
+	alice = mustLoginDevice(t, s, "alice", "alice-password", "alice-dev")
+
+	mustJoin(t, s, alice, second.Code, "")
+}
+
 func TestRoomHoldsAtMostDefaultCapacityOfDevices(t *testing.T) {
 	s := servertest.Start(t)
 	owner := mustLogin(t, s)
