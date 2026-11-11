@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/Bank5y/mokoup2p/api"
 )
@@ -46,6 +47,13 @@ type Status struct {
 	DeviceName string `json:"deviceName"`
 	// Room is set in StateInRoom.
 	Room *CurrentRoom `json:"room,omitempty"`
+	// Connected reports whether the realtime connection to the server is
+	// up. While it is down the daemon keeps reconnecting; a room survives
+	// if it comes back within api.HeartbeatTimeout.
+	Connected bool `json:"connected"`
+	// Revision changes whenever anything shown in the status changes, or
+	// the members of the current room change. See WaitStatus.
+	Revision uint64 `json:"revision"`
 }
 
 type SetServerRequest struct {
@@ -87,6 +95,20 @@ func (c *Client) Status(ctx context.Context) (Status, error) {
 	err := c.do(ctx, http.MethodGet, PathStatus, nil, &st)
 	return st, err
 }
+
+// WaitStatus waits until the status revision differs from revision and
+// returns the new status. The daemon answers after a while (about 25
+// seconds) even if nothing changed, so callers simply call again. Front ends
+// use it to follow changes, such as members joining, as they happen.
+func (c *Client) WaitStatus(ctx context.Context, revision uint64) (Status, error) {
+	var st Status
+	err := c.do(ctx, http.MethodGet, PathStatus+"?"+WaitParam+"="+strconv.FormatUint(revision, 10), nil, &st)
+	return st, err
+}
+
+// WaitParam is the query parameter of GET PathStatus that makes it wait for
+// a revision other than the given one.
+const WaitParam = "wait"
 
 func (c *Client) SetServer(ctx context.Context, url string) (Status, error) {
 	var st Status

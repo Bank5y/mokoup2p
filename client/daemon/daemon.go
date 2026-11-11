@@ -30,6 +30,12 @@ type Config struct {
 	// AutoLoginRetry is the first delay before retrying automatic login when
 	// the server is unreachable; it doubles up to a minute. Default 2s.
 	AutoLoginRetry time.Duration
+	// HeartbeatInterval is how often the daemon sends heartbeats on the
+	// realtime connection. Default api.HeartbeatInterval.
+	HeartbeatInterval time.Duration
+	// ReconnectDelay is the first delay before reconnecting the realtime
+	// connection; it doubles up to a third of api.HeartbeatTimeout. Default 1s.
+	ReconnectDelay time.Duration
 }
 
 type Daemon struct {
@@ -56,6 +62,15 @@ type Daemon struct {
 
 	// serverDeviceName is the device name the server last reported.
 	serverDeviceName string
+
+	// The realtime connection (realtime.go).
+	connected      bool
+	realtimeWake   chan struct{}
+	realtimeCancel context.CancelFunc // ends the current connection
+	// revision counts changes of the status; changedCh is closed and
+	// replaced at each change (see changed).
+	revision  uint64
+	changedCh chan struct{}
 }
 
 func New(cfg Config) (*Daemon, error) {
@@ -65,11 +80,23 @@ func New(cfg Config) (*Daemon, error) {
 	if cfg.AutoLoginRetry <= 0 {
 		cfg.AutoLoginRetry = 2 * time.Second
 	}
+	if cfg.HeartbeatInterval <= 0 {
+		cfg.HeartbeatInterval = api.HeartbeatInterval
+	}
+	if cfg.ReconnectDelay <= 0 {
+		cfg.ReconnectDelay = time.Second
+	}
 	saved, err := loadState(cfg.StateDir, cfg.Hostname)
 	if err != nil {
 		return nil, err
 	}
-	d := &Daemon{cfg: cfg, server: newServerClient(), saved: saved}
+	d := &Daemon{
+		cfg:          cfg,
+		server:       newServerClient(),
+		saved:        saved,
+		realtimeWake: make(chan struct{}, 1),
+		changedCh:    make(chan struct{}),
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET "+ipc.PathStatus, d.handleStatus)
 	mux.HandleFunc("PUT "+ipc.PathServer, d.handleSetServer)
@@ -77,6 +104,7 @@ func New(cfg Config) (*Daemon, error) {
 	d.accountRoutes(mux)
 	d.roomRoutes(mux)
 	d.membershipRoutes(mux)
+	mux.HandleFunc("GET "+ipc.PathMembers, d.handleMembers)
 	d.http = &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	return d, nil
 }
@@ -90,6 +118,11 @@ func (d *Daemon) Start(ctx context.Context) {
 		log.Printf("engine cleanup: %v", err)
 	}
 	ctx, d.stop = context.WithCancel(context.WithoutCancel(ctx))
+	d.background.Add(1)
+	go func() {
+		defer d.background.Done()
+		d.runRealtime(ctx)
+	}()
 	err := d.autoLogin(ctx)
 	if err == nil {
 		d.syncDeviceName(ctx)
@@ -190,6 +223,8 @@ func (d *Daemon) acceptSession(sess api.Session) error {
 	d.user = sess.User
 	d.accessToken = sess.AccessToken
 	d.serverDeviceName = sess.Device.Name
+	d.changed()
+	d.wakeRealtime()
 	return nil
 }
 
@@ -213,11 +248,17 @@ func (d *Daemon) status() ipc.Status {
 		case d.joining:
 			st.State = ipc.StateJoining
 		}
+		st.Connected = d.connected
 	}
+	st.Revision = d.revision
 	return st
 }
 
-func (d *Daemon) handleStatus(w http.ResponseWriter, _ *http.Request) {
+func (d *Daemon) handleStatus(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Has(ipc.WaitParam) {
+		d.handleWaitStatus(w, r)
+		return
+	}
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	writeJSON(w, http.StatusOK, d.status())
@@ -246,6 +287,8 @@ func (d *Daemon) handleSetServer(w http.ResponseWriter, r *http.Request) {
 		d.loggedIn = false
 		d.user = api.User{}
 		d.accessToken = ""
+		d.changed()
+		d.wakeRealtime()
 		if err := saveState(d.cfg.StateDir, d.saved); err != nil {
 			writeError(w, err)
 			return

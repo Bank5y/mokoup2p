@@ -4,9 +4,14 @@ package api
 // caller escapes the code.
 func PathRoomMembers(code string) string { return PathRoom(code) + "/members" }
 
-// PathMembership is the calling device's current membership; DELETE leaves
-// the room the device is in.
+// PathMembership is the calling device's current membership: GET returns
+// MyMembership, DELETE leaves the room the device is in.
 const PathMembership = "/api/v1/me/membership"
+
+// MyMembership tells a device which room it is in; Room is null when in none.
+type MyMembership struct {
+	Room *Room `json:"room"`
+}
 
 // Error codes of joining a room. A disabled account and an unknown room
 // reuse ErrAccountDisabled and ErrRoomNotFound.
@@ -43,4 +48,24 @@ type NetworkConfig struct {
 	Subnet string `json:"subnet"`
 	// RelayPeers are the relay node addresses, e.g. "tcp://relay.example.com:11010".
 	RelayPeers []string `json:"relayPeers"`
+}
+
+// ErrNotRoomMember: only the room's members, its owner and administrators
+// may see who is in a room.
+const ErrNotRoomMember ErrorCode = "not_room_member"
+
+// Member is a device in a room, as the other members see it.
+type Member struct {
+	// ID identifies the device on the server (e.g. to kick it). It is not
+	// the device identity the client generated.
+	ID         int64  `json:"id"`
+	Username   string `json:"username"`
+	DeviceName string `json:"deviceName"`
+	// VirtualIP is the device's address in the room.
+	VirtualIP string `json:"virtualIp"`
+}
+
+// MemberList is returned by GET PathRoomMembers, ordered by virtual IP.
+type MemberList struct {
+	Members []Member `json:"members"`
 }

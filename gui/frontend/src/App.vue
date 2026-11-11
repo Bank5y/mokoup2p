@@ -1,6 +1,6 @@
 <script setup>
-import { onMounted, ref } from 'vue'
-import { status } from './backend.js'
+import { onMounted, onUnmounted, ref } from 'vue'
+import { status, waitStatus } from './backend.js'
 import { t, errorText } from './i18n/index.js'
 import LoginView from './views/LoginView.vue'
 import HomeView from './views/HomeView.vue'
@@ -18,7 +18,34 @@ async function refresh() {
   }
 }
 
-onMounted(refresh)
+// follow keeps current up to date: the daemon answers waitStatus as soon as
+// anything changes (members joining or leaving, the room ending, the
+// connection to the server dropping), so the UI never needs polling.
+let following = true
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+async function follow() {
+  while (following) {
+    if (!current.value) {
+      await sleep(1000)
+      continue
+    }
+    try {
+      current.value = await waitStatus(current.value.revision)
+      error.value = ''
+    } catch {
+      await sleep(2000)
+    }
+  }
+}
+
+onMounted(async () => {
+  await refresh()
+  follow()
+})
+onUnmounted(() => {
+  following = false
+})
 </script>
 
 <template>

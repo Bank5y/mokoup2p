@@ -54,11 +54,13 @@ func (d *Daemon) join(ctx context.Context, req ipc.JoinRequest) error {
 		return errInRoom
 	}
 	d.joining = true
+	d.changed()
 	hostname := d.saved.DeviceName
 	d.mu.Unlock()
 	defer func() {
 		d.mu.Lock()
 		d.joining = false
+		d.changed()
 		d.mu.Unlock()
 	}()
 
@@ -147,11 +149,18 @@ func (d *Daemon) handleLeave(w http.ResponseWriter, r *http.Request) {
 func (d *Daemon) leaveRoom(ctx context.Context, tellServer bool) {
 	d.roomMu.Lock()
 	defer d.roomMu.Unlock()
+	d.leaveRoomLocked(ctx, tellServer)
+}
 
+// leaveRoomLocked is leaveRoom for callers holding d.roomMu.
+func (d *Daemon) leaveRoomLocked(ctx context.Context, tellServer bool) {
 	d.mu.Lock()
 	inRoom := d.room != nil
 	d.room = nil
 	d.network = api.NetworkConfig{}
+	if inRoom {
+		d.changed()
+	}
 	d.mu.Unlock()
 	if !inRoom {
 		return

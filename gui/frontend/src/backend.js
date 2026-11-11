@@ -24,6 +24,10 @@ export const deleteRoom = (code) => app().DeleteRoom(code)
 
 export const join = (code, password) => app().Join(code, password)
 export const leave = () => app().Leave()
+export const members = () => app().Members()
+// waitStatus resolves with the status once its revision differs from the
+// given one (or after the daemon's long-poll period).
+export const waitStatus = (revision) => app().WaitStatus(revision)
 
 // copyText puts text on the system clipboard through the Wails runtime.
 export async function copyText(text) {

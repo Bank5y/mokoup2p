@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	PathJoin  = "/v1/join"
-	PathLeave = "/v1/leave"
+	PathJoin    = "/v1/join"
+	PathLeave   = "/v1/leave"
+	PathMembers = "/v1/members"
 )
 
 // States of the room lifecycle, after StateIdle.
@@ -26,6 +27,8 @@ const (
 	// ErrEngineFailed: the server admitted the device but the network
 	// engine could not start; the device has left the room again.
 	ErrEngineFailed api.ErrorCode = "engine_failed"
+	// ErrNotInRoom: the request needs the device to be in a room.
+	ErrNotInRoom api.ErrorCode = "not_in_room"
 )
 
 type JoinRequest struct {
@@ -55,4 +58,26 @@ func (c *Client) Leave(ctx context.Context) (Status, error) {
 	var st Status
 	err := c.do(ctx, http.MethodPost, PathLeave, nil, &st)
 	return st, err
+}
+
+// Member is a device in the current room.
+type Member struct {
+	// ID identifies the device on the server.
+	ID         int64  `json:"id"`
+	Username   string `json:"username"`
+	DeviceName string `json:"deviceName"`
+	VirtualIP  string `json:"virtualIp"`
+	// Self marks this device.
+	Self bool `json:"self,omitempty"`
+}
+
+type MemberList struct {
+	Members []Member `json:"members"`
+}
+
+// Members lists the devices in the current room, ordered by virtual IP.
+func (c *Client) Members(ctx context.Context) ([]Member, error) {
+	var list MemberList
+	err := c.do(ctx, http.MethodGet, PathMembers, nil, &list)
+	return list.Members, err
 }

@@ -122,6 +122,7 @@ func (s *Server) handleSetDisabled(w http.ResponseWriter, r *http.Request, _ ses
 		writeError(w, err)
 		return
 	}
+	var ended []membership
 	err := s.updateUser(id, func(tx *sql.Tx) error {
 		if !req.Disabled {
 			return nil
@@ -132,12 +133,37 @@ func (s *Server) handleSetDisabled(w http.ResponseWriter, r *http.Request, _ ses
 		if _, err := tx.Exec(`DELETE FROM tokens WHERE device_pk IN (SELECT id FROM devices WHERE user_id = ?)`, id); err != nil {
 			return err
 		}
-		// The user's devices leave their rooms. Telling them and the other
-		// members is the realtime ticket's job (#7).
-		_, err := tx.Exec(`DELETE FROM memberships WHERE device_pk IN (SELECT id FROM devices WHERE user_id = ?)`, id)
+		// The user's devices leave their rooms. Telling the devices
+		// themselves is #10's job (account disabled push).
+		devices, err := userDevices(tx, id)
+		if err != nil {
+			return err
+		}
+		ended, err = endMemberships(tx, devices...)
 		return err
 	}, `UPDATE users SET disabled = ? WHERE id = ?`, req.Disabled, id)
+	if err == nil {
+		s.announceDepartures(ended, api.LeftWhenDisabled)
+	}
 	s.respondUser(w, err, id)
+}
+
+// userDevices returns the device_pk of every device of a user.
+func userDevices(q querier, userID int64) ([]int64, error) {
+	rows, err := q.Query(`SELECT id FROM devices WHERE user_id = ?`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var pks []int64
+	for rows.Next() {
+		var pk int64
+		if err := rows.Scan(&pk); err != nil {
+			return nil, err
+		}
+		pks = append(pks, pk)
+	}
+	return pks, rows.Err()
 }
 
 func (s *Server) handleSetAdmin(w http.ResponseWriter, r *http.Request, _ session) {
