@@ -22,12 +22,16 @@ type Config struct {
 	// none exists. They are ignored once an administrator exists.
 	AdminUsername string
 	AdminPassword string
+	// RelayPeers are the relay node addresses handed to devices in their
+	// network configuration.
+	RelayPeers []string
 }
 
 type Server struct {
-	db    *sql.DB
-	clock clock.Clock
-	mux   *http.ServeMux
+	db         *sql.DB
+	clock      clock.Clock
+	mux        *http.ServeMux
+	relayPeers []string
 }
 
 func New(cfg Config) (*Server, error) {
@@ -38,8 +42,12 @@ func New(cfg Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{db: db, clock: cfg.Clock}
+	s := &Server{db: db, clock: cfg.Clock, relayPeers: cfg.RelayPeers}
 	if err := s.ensureAdministrator(cfg.AdminUsername, cfg.AdminPassword); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err := s.endAllMemberships(); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -57,6 +65,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST "+api.PathRefresh, s.handleRefresh)
 	s.mux.HandleFunc("GET "+api.PathMe, s.authenticated(s.handleMe))
 	s.roomRoutes()
+	s.membershipRoutes()
 }
 
 func openDB(path string) (*sql.DB, error) {
@@ -66,7 +75,7 @@ func openDB(path string) (*sql.DB, error) {
 		return nil, err
 	}
 	db.SetMaxOpenConns(1)
-	for _, ddl := range []string{schema, settingsSchema, roomSchema} {
+	for _, ddl := range []string{schema, settingsSchema, roomSchema, membershipSchema} {
 		if _, err := db.Exec(ddl); err != nil {
 			db.Close()
 			return nil, fmt.Errorf("migrate: %w", err)

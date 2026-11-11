@@ -60,6 +60,9 @@ func (d *Daemon) renewSession(ctx context.Context, stale string) (string, error)
 			d.loggedIn = false
 			d.user = api.User{}
 			d.accessToken = ""
+			// Logged out: leaving the room cannot be told to the server
+			// any more, but the engine must stop.
+			d.leaveRoomInBackground(false)
 			if saveErr := saveState(d.cfg.StateDir, d.saved); saveErr != nil {
 				return "", saveErr
 			}

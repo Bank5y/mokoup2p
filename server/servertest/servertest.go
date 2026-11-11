@@ -24,6 +24,8 @@ import (
 const (
 	AdminUsername = "admin"
 	AdminPassword = "admin-password"
+	// RelayPeer is the relay node address the test server hands out.
+	RelayPeer = "tcp://relay.test:11010"
 )
 
 type Server struct {
@@ -64,6 +66,7 @@ func (s *Server) start(t testing.TB, adminUsername, adminPassword string) {
 		Clock:         s.Clock,
 		AdminUsername: adminUsername,
 		AdminPassword: adminPassword,
+		RelayPeers:    []string{RelayPeer},
 	})
 	if err != nil {
 		t.Fatalf("start server: %v", err)
@@ -158,6 +161,24 @@ func (s *Server) AddUser(t testing.TB, username, password string) {
 	}
 	if _, err := db.Exec(`INSERT INTO users (username, password_hash) VALUES (?, ?)`, username, string(hash)); err != nil {
 		t.Fatalf("add user %q: %v", username, err)
+	}
+}
+
+// DisableUser disables a user. Like AddUser it writes the database directly
+// until the admin API from #3 exists; switch to that API then.
+func (s *Server) DisableUser(t testing.TB, username string) {
+	t.Helper()
+	db, err := sql.Open("sqlite", "file:"+s.dbPath+"?_pragma=busy_timeout(5000)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	res, err := db.Exec(`UPDATE users SET disabled = 1 WHERE username = ?`, username)
+	if err != nil {
+		t.Fatalf("disable user %q: %v", username, err)
+	}
+	if n, _ := res.RowsAffected(); n != 1 {
+		t.Fatalf("disable user %q: no such user", username)
 	}
 }
 
