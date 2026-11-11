@@ -25,6 +25,9 @@ type Config struct {
 	// RelayPeers are the relay node addresses handed to devices in their
 	// network configuration.
 	RelayPeers []string
+	// RelayToken authorizes the relay node to read the relay whitelist
+	// (api.PathRelayNetworks). Empty disables that endpoint.
+	RelayToken string
 }
 
 type Server struct {
@@ -32,6 +35,7 @@ type Server struct {
 	clock      clock.Clock
 	mux        *http.ServeMux
 	relayPeers []string
+	relayToken string
 }
 
 func New(cfg Config) (*Server, error) {
@@ -42,7 +46,7 @@ func New(cfg Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{db: db, clock: cfg.Clock, relayPeers: cfg.RelayPeers}
+	s := &Server{db: db, clock: cfg.Clock, relayPeers: cfg.RelayPeers, relayToken: cfg.RelayToken}
 	if err := s.ensureAdministrator(cfg.AdminUsername, cfg.AdminPassword); err != nil {
 		db.Close()
 		return nil, err
@@ -67,6 +71,7 @@ func (s *Server) routes() {
 	s.accountRoutes()
 	s.roomRoutes()
 	s.membershipRoutes()
+	s.relayRoutes()
 }
 
 func openDB(path string) (*sql.DB, error) {

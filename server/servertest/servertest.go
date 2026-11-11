@@ -23,6 +23,8 @@ const (
 	AdminPassword = "admin-password"
 	// RelayPeer is the relay node address the test server hands out.
 	RelayPeer = "tcp://relay.test:11010"
+	// RelayToken authorizes the relay node's whitelist requests.
+	RelayToken = "relay-token-for-tests"
 )
 
 type Server struct {
@@ -64,6 +66,7 @@ func (s *Server) start(t testing.TB, adminUsername, adminPassword string) {
 		AdminUsername: adminUsername,
 		AdminPassword: adminPassword,
 		RelayPeers:    []string{RelayPeer},
+		RelayToken:    RelayToken,
 	})
 	if err != nil {
 		t.Fatalf("start server: %v", err)

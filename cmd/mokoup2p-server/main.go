@@ -8,6 +8,8 @@
 //	ADMIN_PASSWORD
 //	MOKOUP2P_RELAY_PEERS  relay node addresses handed to devices, comma-separated,
 //	                      e.g. "tcp://p2p.example.com:11010,udp://p2p.example.com:11010"
+//	MOKOUP2P_RELAY_TOKEN  shared secret the relay node (cmd/mokoup2p-relay) uses to
+//	                      read the relay whitelist; unset disables that endpoint
 package main
 
 import (
@@ -31,6 +33,7 @@ func main() {
 		AdminUsername: os.Getenv("ADMIN_USERNAME"),
 		AdminPassword: os.Getenv("ADMIN_PASSWORD"),
 		RelayPeers:    splitList(os.Getenv("MOKOUP2P_RELAY_PEERS")),
+		RelayToken:    os.Getenv("MOKOUP2P_RELAY_TOKEN"),
 	})
 	if err != nil {
 		log.Fatalf("start: %v", err)

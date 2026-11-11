@@ -1,5 +1,9 @@
-# Start with:  ADMIN_USERNAME=admin ADMIN_PASSWORD=change-me docker compose -f deploy/docker-compose.yml up -d
+# Start with:
+#   ADMIN_USERNAME=admin ADMIN_PASSWORD=change-me \
+#   MOKOUP2P_RELAY_HOST=p2p.example.com MOKOUP2P_RELAY_TOKEN=$(openssl rand -hex 24) \
+#   docker compose -f deploy/docker-compose.yml up -d
 # ADMIN_* are only needed on first start (when no administrator exists yet).
+# MOKOUP2P_RELAY_TOKEN must stay the same across restarts of both services.
 # The server speaks plain HTTP; put a reverse proxy (e.g. Caddy) in front for HTTPS.
 services:
   server:
@@ -12,12 +16,32 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       MOKOUP2P_LISTEN: ":8080"
       MOKOUP2P_DB: /data/mokoup2p.db
-      # Relay node addresses handed to devices, comma-separated.
-      MOKOUP2P_RELAY_PEERS: ${MOKOUP2P_RELAY_PEERS:-}
+      # Relay node addresses handed to devices, comma-separated. Defaults to
+      # the relay service below at its public host and port.
+      MOKOUP2P_RELAY_PEERS: ${MOKOUP2P_RELAY_PEERS:-tcp://${MOKOUP2P_RELAY_HOST:?set MOKOUP2P_RELAY_HOST to the relay's public host name or IP}:${MOKOUP2P_RELAY_PORT:-11010},udp://${MOKOUP2P_RELAY_HOST}:${MOKOUP2P_RELAY_PORT:-11010}}
+      # Lets the relay read the list of registered rooms.
+      MOKOUP2P_RELAY_TOKEN: ${MOKOUP2P_RELAY_TOKEN:?set MOKOUP2P_RELAY_TOKEN to a random string}
     ports:
       - "${MOKOUP2P_PORT:-8080}:8080"
     volumes:
       - server-data:/data
+
+  # EasyTier relay node (v2.6.4, pinned in Dockerfile.relay). It relays only
+  # the networks of rooms registered on the server and refuses all others;
+  # see docs/adr/0002-relay-whitelist-sync.md.
+  relay:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.relay
+    restart: unless-stopped
+    depends_on:
+      - server
+    environment:
+      MOKOUP2P_SERVER_URL: http://server:8080
+      MOKOUP2P_RELAY_TOKEN: ${MOKOUP2P_RELAY_TOKEN:?set MOKOUP2P_RELAY_TOKEN to a random string}
+    ports:
+      - "${MOKOUP2P_RELAY_PORT:-11010}:11010/tcp"
+      - "${MOKOUP2P_RELAY_PORT:-11010}:11010/udp"
 
 volumes:
   server-data:

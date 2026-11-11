@@ -1,0 +1,21 @@
+# Seam-3 smoke test device: the real daemon (mokoup2pd) and CLI with the
+# pinned easytier-core / easytier-cli from the official image, plus tools
+# the test drives (socat, iptables, jq). Build context: repository root.
+ARG EASYTIER_IMAGE=easytier/easytier:v2.6.4@sha256:91d6732ea5ff71542fdb99333d2ee7b168e973443114db84db061e452427d91e
+
+FROM golang:1.27-alpine AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY api ./api
+COPY internal ./internal
+COPY client ./client
+COPY cmd/mokoup2pd ./cmd/mokoup2pd
+COPY cmd/mokoup2p ./cmd/mokoup2p
+RUN CGO_ENABLED=0 go build -trimpath -o /out/ ./cmd/mokoup2pd ./cmd/mokoup2p
+
+FROM ${EASYTIER_IMAGE}
+RUN apk add --no-cache socat iptables jq setpriv
+COPY --from=build /out/mokoup2pd /out/mokoup2p /usr/local/bin/
+ENV MOKOUP2P_STATE_DIR=/var/lib/mokoup2p MOKOUP2P_SOCKET=/run/mokoup2p/daemon.sock
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/mokoup2pd"]
