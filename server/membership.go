@@ -47,6 +47,7 @@ func init() {
 
 func (s *Server) membershipRoutes() {
 	s.mux.HandleFunc("POST "+api.PathRoomMembers("{code}"), s.authenticated(s.handleJoin))
+	s.mux.HandleFunc("GET "+api.PathRoomMembers("{code}"), s.authenticated(s.handleListMembers))
 	s.mux.HandleFunc("DELETE "+api.PathMembership, s.authenticated(s.handleLeave))
 }
 
@@ -119,7 +120,8 @@ func (s *Server) join(code string, se session, password string) (api.JoinResult,
 	}
 	// Joining the room the device is already in just hands out the
 	// configuration again.
-	if currentRoom != room.id {
+	joined := currentRoom != room.id
+	if joined {
 		capacity, err := getSetting(tx, settingRoomCapacity)
 		if err != nil {
 			return api.JoinResult{}, err
@@ -150,6 +152,10 @@ func (s *Server) join(code string, se session, password string) (api.JoinResult,
 	}
 	if err := tx.Commit(); err != nil {
 		return api.JoinResult{}, err
+	}
+	s.alive(se.devicePK)
+	if joined {
+		s.announceJoin(se.devicePK, room)
 	}
 	return api.JoinResult{
 		Room: room.api(),
@@ -218,8 +224,17 @@ func networkName(r roomRow) string {
 	return "mokoup2p-" + hex.EncodeToString(sum[:8])
 }
 
+// announceJoin tells the room's other members that a device has joined.
+func (s *Server) announceJoin(devicePK int64, room roomRow) {
+	ms, ok, err := membershipOf(s.db, devicePK)
+	if err != nil || !ok || ms.roomID != room.id {
+		return // gone again already
+	}
+	s.pushToRoom(room.id, devicePK, api.EventMemberJoined, api.MemberJoined{Room: ms.roomCode, Member: ms.member})
+}
+
 func (s *Server) handleLeave(w http.ResponseWriter, _ *http.Request, se session) {
-	if _, err := s.db.Exec(`DELETE FROM memberships WHERE device_pk = ?`, se.devicePK); err != nil {
+	if err := s.endMembership(se.devicePK, api.LeftByDevice); err != nil {
 		writeError(w, err)
 		return
 	}
