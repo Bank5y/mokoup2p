@@ -48,6 +48,7 @@ func init() {
 func (s *Server) membershipRoutes() {
 	s.mux.HandleFunc("POST "+api.PathRoomMembers("{code}"), s.authenticated(s.handleJoin))
 	s.mux.HandleFunc("GET "+api.PathRoomMembers("{code}"), s.authenticated(s.handleListMembers))
+	s.mux.HandleFunc("GET "+api.PathMembership, s.authenticated(s.handleMyMembership))
 	s.mux.HandleFunc("DELETE "+api.PathMembership, s.authenticated(s.handleLeave))
 }
 

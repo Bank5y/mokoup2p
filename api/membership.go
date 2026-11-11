@@ -4,9 +4,14 @@ package api
 // caller escapes the code.
 func PathRoomMembers(code string) string { return PathRoom(code) + "/members" }
 
-// PathMembership is the calling device's current membership; DELETE leaves
-// the room the device is in.
+// PathMembership is the calling device's current membership: GET returns
+// MyMembership, DELETE leaves the room the device is in.
 const PathMembership = "/api/v1/me/membership"
+
+// MyMembership tells a device which room it is in; Room is null when in none.
+type MyMembership struct {
+	Room *Room `json:"room"`
+}
 
 // Error codes of joining a room. A disabled account and an unknown room
 // reuse ErrAccountDisabled and ErrRoomNotFound.

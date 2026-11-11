@@ -34,6 +34,8 @@ func (d *Daemon) logOutLocally() error {
 	d.user = api.User{}
 	d.accessToken = ""
 	d.serverDeviceName = ""
+	d.changed()
+	d.wakeRealtime()
 	return saveState(d.cfg.StateDir, d.saved)
 }
 
@@ -93,6 +95,7 @@ func (d *Daemon) handleSetDeviceName(w http.ResponseWriter, r *http.Request) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.saved.DeviceName = name
+	d.changed()
 	if d.loggedIn {
 		d.serverDeviceName = name
 	}

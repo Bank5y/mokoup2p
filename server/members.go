@@ -158,3 +158,23 @@ func (s *Server) handleListMembers(w http.ResponseWriter, r *http.Request, se se
 	}
 	writeJSON(w, http.StatusOK, api.MemberList{Members: members})
 }
+
+func (s *Server) handleMyMembership(w http.ResponseWriter, _ *http.Request, se session) {
+	res := api.MyMembership{}
+	ms, ok, err := membershipOf(s.db, se.devicePK)
+	if err == nil && ok {
+		var room roomRow
+		room, err = scanRoom(s.db.QueryRow(`SELECT `+roomColumns+` WHERE r.id = ?`, ms.roomID).Scan)
+		if errors.Is(err, sql.ErrNoRows) {
+			err = nil // the room went away just now
+		} else if err == nil {
+			r := room.api()
+			res.Room = &r
+		}
+	}
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, res)
+}

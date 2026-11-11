@@ -92,6 +92,34 @@ func TestMemberListOfUnknownRoomIsNotFound(t *testing.T) {
 	}
 }
 
+func TestDeviceSeesWhichRoomItIsIn(t *testing.T) {
+	s := servertest.Start(t)
+	owner := mustLogin(t, s)
+	room := mustCreateRoom(t, s, owner, "lan party")
+	alice := mustLoginAs(t, s, "alice")
+
+	if got := mustMyMembership(t, s, alice); got.Room != nil {
+		t.Fatalf("want no room before joining, got %+v", got.Room)
+	}
+	mustJoin(t, s, alice, room.Code, "")
+	if got := mustMyMembership(t, s, alice); got.Room == nil || *got.Room != room {
+		t.Fatalf("want room %+v, got %+v", room, got.Room)
+	}
+	mustLeave(t, s, alice)
+	if got := mustMyMembership(t, s, alice); got.Room != nil {
+		t.Fatalf("want no room after leaving, got %+v", got.Room)
+	}
+}
+
+func mustMyMembership(t *testing.T, s *servertest.Server, sess api.Session) api.MyMembership {
+	t.Helper()
+	var ms api.MyMembership
+	if err := s.Do(http.MethodGet, api.PathMembership, sess.AccessToken, nil, &ms); err != nil {
+		t.Fatalf("get membership: %v", err)
+	}
+	return ms
+}
+
 func mustListMembers(t *testing.T, s *servertest.Server, sess api.Session, code string) []api.Member {
 	t.Helper()
 	members, err := listMembers(s, sess, code)
