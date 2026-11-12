@@ -72,6 +72,9 @@ func (p *Process) launch() error {
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start %s: %w", p.spec.Path, err)
 	}
+	if err := afterStart(cmd); err != nil {
+		log.Printf("%s: %v", p.spec.Name, err)
+	}
 	exited := make(chan struct{})
 	p.mu.Lock()
 	p.cmd = cmd

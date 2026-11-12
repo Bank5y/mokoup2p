@@ -1,6 +1,7 @@
 package etproc
 
 import (
+	"os/exec"
 	"syscall"
 )
 
@@ -14,3 +15,6 @@ func sysProcAttr() *syscall.SysProcAttr {
 func terminate(pid int) error { return syscall.Kill(-pid, syscall.SIGTERM) }
 
 func kill(pid int) error { return syscall.Kill(-pid, syscall.SIGKILL) }
+
+// afterStart has nothing to do: Pdeathsig already ties the child to us.
+func afterStart(*exec.Cmd) error { return nil }
