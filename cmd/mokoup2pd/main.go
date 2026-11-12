@@ -38,6 +38,9 @@ func run(ctx context.Context, stateDir string, listen func() (net.Listener, stri
 		CorePath: filepath.Join(etDir, "easytier-core"+exeSuffix),
 		CLIPath:  filepath.Join(etDir, "easytier-cli"+exeSuffix),
 		PIDFile:  filepath.Join(stateDir, "easytier-core.pid"),
+		// Windows sends 255.255.255.255 out of the physical NIC only; let
+		// EasyTier copy such broadcasts into the room (ADR-0003).
+		UDPBroadcastRelay: runtime.GOOS == "windows",
 	})
 
 	d, err := daemon.New(daemon.Config{StateDir: stateDir, Engine: eng})
