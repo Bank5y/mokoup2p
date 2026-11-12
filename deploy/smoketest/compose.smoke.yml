@@ -1,0 +1,43 @@
+# Overlay on deploy/docker-compose.yml for the seam-3 smoke test; run.sh
+# uses it. The network is internal (no Internet, so no public STUN and no
+# hairpin paths): the only direct path between the two devices is the
+# Docker bridge, which the test blocks with iptables.
+services:
+  server:
+    ports: !reset []
+  relay:
+    ports: !reset []
+    environment:
+      MOKOUP2P_RELAY_POLL: 1s
+
+  client1: &client
+    build:
+      context: ..  # relative to the project directory (deploy/)
+      dockerfile: deploy/smoketest/Dockerfile.client
+    hostname: client1
+    cap_add: [NET_ADMIN]
+    devices: ["/dev/net/tun:/dev/net/tun"]
+    depends_on: [server, relay]
+  client2:
+    <<: *client
+    hostname: client2
+
+  # Plain easytier-core nodes in a network the server never registered.
+  # They can only find each other through the relay, which must refuse them.
+  stranger1: &stranger
+    image: easytier/easytier:v2.6.4@sha256:91d6732ea5ff71542fdb99333d2ee7b168e973443114db84db061e452427d91e
+    cap_add: [NET_ADMIN]
+    devices: ["/dev/net/tun:/dev/net/tun"]
+    depends_on: [relay]
+    command: ["--network-name", "mokoup2p-00000000deadbeef", "--network-secret", "stranger",
+              "--ipv4", "10.250.0.1/24", "--peers", "tcp://relay:11010", "--no-listener",
+              "--dev-name", "stranger0"]
+  stranger2:
+    <<: *stranger
+    command: ["--network-name", "mokoup2p-00000000deadbeef", "--network-secret", "stranger",
+              "--ipv4", "10.250.0.2/24", "--peers", "tcp://relay:11010", "--no-listener",
+              "--dev-name", "stranger0"]
+
+networks:
+  default:
+    internal: true

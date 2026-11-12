@@ -1,0 +1,27 @@
+# Relay node: the pinned, unmodified EasyTier image plus the mokoup2p-relay
+# wrapper that keeps its network whitelist in sync with the server
+# (docs/adr/0002-relay-whitelist-sync.md). Build context: repository root.
+#
+# EasyTier is pinned to v2.6.4 (easytier-core 2.6.4-8428a89d). The digest is
+# the multi-arch index of easytier/easytier:v2.6.4 on Docker Hub. Upgrading
+# means changing it here, in deploy/smoketest/Dockerfile.client and in
+# internal/etproc.Version, and re-running deploy/smoketest/run.sh.
+ARG EASYTIER_IMAGE=easytier/easytier:v2.6.4@sha256:91d6732ea5ff71542fdb99333d2ee7b168e973443114db84db061e452427d91e
+
+FROM golang:1.27-alpine AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY api ./api
+COPY internal ./internal
+COPY cmd/mokoup2p-relay ./cmd/mokoup2p-relay
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/mokoup2p-relay ./cmd/mokoup2p-relay
+
+FROM ${EASYTIER_IMAGE}
+RUN adduser -D -H -u 10002 relay
+COPY --from=build /out/mokoup2p-relay /usr/local/bin/mokoup2p-relay
+# The relay has no virtual IP, so it creates no TUN and needs no
+# capabilities.
+USER relay
+EXPOSE 11010/tcp 11010/udp
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/mokoup2p-relay"]

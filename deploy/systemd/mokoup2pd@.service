@@ -1,0 +1,43 @@
+# mokoup2p client background service, one instance for the desktop user
+# whose numeric UID is the instance name:
+#
+#   sudo systemctl enable --now mokoup2pd@$(id -u).service
+#
+# The daemon runs as that user (so only that user can reach its IPC socket)
+# with CAP_NET_ADMIN, which the easytier-core child inherits as an ambient
+# capability to create the TUN device and set its address and routes.
+# Only one instance per machine: the TUN name and ports are fixed.
+#
+# The CLI and GUI find the socket at /run/mokoup2p/<UID>/daemon.sock.
+# easytier-core and easytier-cli (pinned v2.6.4) are expected next to
+# mokoup2pd, or in MOKOUP2P_EASYTIER_DIR.
+[Unit]
+Description=mokoup2p client daemon (UID %i)
+Documentation=https://github.com/Bank5y/mokoup2p
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=%i
+ExecStart=/usr/lib/mokoup2p/mokoup2pd
+Environment=MOKOUP2P_SOCKET=/run/mokoup2p/%i/daemon.sock
+Environment=MOKOUP2P_STATE_DIR=/var/lib/mokoup2p/%i
+RuntimeDirectory=mokoup2p/%i
+RuntimeDirectoryMode=0700
+StateDirectory=mokoup2p/%i
+StateDirectoryMode=0700
+
+AmbientCapabilities=CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_ADMIN
+NoNewPrivileges=yes
+DeviceAllow=/dev/net/tun rw
+
+# Stopping the service leaves the room; make sure easytier-core goes with it.
+KillMode=control-group
+TimeoutStopSec=15
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
