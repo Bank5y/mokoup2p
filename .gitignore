@@ -2,3 +2,5 @@
 gui/frontend/node_modules/
 gui/frontend/dist/
 gui/build/bin/
+/build/
+/dist/

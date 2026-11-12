@@ -1,0 +1,48 @@
+# nfpm config template for the .deb and .rpm client packages. build.sh
+# substitutes ${ARCH}, ${VERSION}, ${STAGE} (the staged files for that
+# architecture), ${SCRIPTS} and ${GUI_CONTENTS} before running nfpm.
+name: mokoup2p
+arch: ${ARCH}
+platform: linux
+version: ${VERSION}
+section: net
+priority: optional
+maintainer: mokoup2p <https://github.com/Bank5y/mokoup2p>
+description: |
+  Self-hosted P2P virtual LAN client: join a room by its code and reach the
+  other devices as if on one LAN (EasyTier data plane).
+vendor: mokoup2p
+homepage: https://github.com/Bank5y/mokoup2p
+license: see /usr/share/doc/mokoup2p/THIRD_PARTY_NOTICES.md
+
+contents:
+  - src: ${STAGE}/mokoup2pd
+    dst: /usr/lib/mokoup2p/mokoup2pd
+    file_info: { mode: 0755 }
+  - src: ${STAGE}/easytier-core
+    dst: /usr/lib/mokoup2p/easytier-core
+    file_info: { mode: 0755 }
+  - src: ${STAGE}/easytier-cli
+    dst: /usr/lib/mokoup2p/easytier-cli
+    file_info: { mode: 0755 }
+  - src: ${STAGE}/mokoup2p
+    dst: /usr/bin/mokoup2p
+    file_info: { mode: 0755 }
+  - src: ${STAGE}/mokoup2pd@.service
+    dst: /usr/lib/systemd/system/mokoup2pd@.service
+    file_info: { mode: 0644 }
+  - src: ${STAGE}/doc/
+    dst: /usr/share/doc/mokoup2p/
+    type: tree
+${GUI_CONTENTS}
+
+scripts:
+  postinstall: ${SCRIPTS}/postinstall.sh
+  preremove: ${SCRIPTS}/preremove.sh
+  postremove: ${SCRIPTS}/postremove.sh
+
+overrides:
+  deb:
+    recommends: [libwebkit2gtk-4.1-0, libgtk-3-0]
+  rpm:
+    recommends: [webkit2gtk4.1, gtk3]

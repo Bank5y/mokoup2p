@@ -6,6 +6,10 @@
 //	MOKOUP2P_DB       SQLite database file (default "/data/mokoup2p.db")
 //	ADMIN_USERNAME    first administrator, created only if none exists
 //	ADMIN_PASSWORD
+//	MOKOUP2P_RELAY_PEERS  relay node addresses handed to devices, comma-separated,
+//	                      e.g. "tcp://p2p.example.com:11010,udp://p2p.example.com:11010"
+//	MOKOUP2P_RELAY_TOKEN  shared secret the relay node (cmd/mokoup2p-relay) uses to
+//	                      read the relay whitelist; unset disables that endpoint
 package main
 
 import (
@@ -15,6 +19,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -27,6 +32,8 @@ func main() {
 		DBPath:        envOr("MOKOUP2P_DB", "/data/mokoup2p.db"),
 		AdminUsername: os.Getenv("ADMIN_USERNAME"),
 		AdminPassword: os.Getenv("ADMIN_PASSWORD"),
+		RelayPeers:    splitList(os.Getenv("MOKOUP2P_RELAY_PEERS")),
+		RelayToken:    os.Getenv("MOKOUP2P_RELAY_TOKEN"),
 	})
 	if err != nil {
 		log.Fatalf("start: %v", err)
@@ -54,4 +61,15 @@ func envOr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+// splitList splits a comma-separated list, dropping blanks.
+func splitList(v string) []string {
+	var out []string
+	for _, item := range strings.Split(v, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			out = append(out, item)
+		}
+	}
+	return out
 }

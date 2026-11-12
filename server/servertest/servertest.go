@@ -6,9 +6,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -21,6 +23,10 @@ import (
 const (
 	AdminUsername = "admin"
 	AdminPassword = "admin-password"
+	// RelayPeer is the relay node address the test server hands out.
+	RelayPeer = "tcp://relay.test:11010"
+	// RelayToken authorizes the relay node's whitelist requests.
+	RelayToken = "relay-token-for-tests"
 )
 
 type Server struct {
@@ -30,6 +36,7 @@ type Server struct {
 	dbPath      string
 	srv         *server.Server
 	http        *httptest.Server
+	conns       *trackingListener
 	unreachable atomic.Bool
 }
 
@@ -61,6 +68,8 @@ func (s *Server) start(t testing.TB, adminUsername, adminPassword string) {
 		Clock:         s.Clock,
 		AdminUsername: adminUsername,
 		AdminPassword: adminPassword,
+		RelayPeers:    []string{RelayPeer},
+		RelayToken:    RelayToken,
 	})
 	if err != nil {
 		t.Fatalf("start server: %v", err)
@@ -77,7 +86,10 @@ func (s *Server) start(t testing.TB, adminUsername, adminPassword string) {
 		srv.Handler().ServeHTTP(w, r)
 	})
 	if s.http == nil {
-		s.http = httptest.NewServer(handler)
+		s.http = httptest.NewUnstartedServer(handler)
+		s.conns = &trackingListener{Listener: s.http.Listener, conns: map[net.Conn]struct{}{}}
+		s.http.Listener = s.conns
+		s.http.Start()
 		s.URL = s.http.URL
 	} else {
 		s.http.Config.Handler = handler
@@ -85,8 +97,54 @@ func (s *Server) start(t testing.TB, adminUsername, adminPassword string) {
 }
 
 // SetUnreachable makes every request fail at the network level (true) or
-// restores normal service (false).
-func (s *Server) SetUnreachable(v bool) { s.unreachable.Store(v) }
+// restores normal service (false). Going unreachable also cuts every open
+// connection, realtime channels included.
+func (s *Server) SetUnreachable(v bool) {
+	s.unreachable.Store(v)
+	if v {
+		s.conns.closeAll()
+	}
+}
+
+// trackingListener remembers accepted connections so they can be cut, even
+// after they were hijacked (as WebSockets are).
+type trackingListener struct {
+	net.Listener
+	mu    sync.Mutex
+	conns map[net.Conn]struct{}
+}
+
+func (l *trackingListener) Accept() (net.Conn, error) {
+	c, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	l.mu.Lock()
+	l.conns[c] = struct{}{}
+	l.mu.Unlock()
+	return &trackedConn{Conn: c, l: l}, nil
+}
+
+func (l *trackingListener) closeAll() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for c := range l.conns {
+		c.Close()
+		delete(l.conns, c)
+	}
+}
+
+type trackedConn struct {
+	net.Conn
+	l *trackingListener
+}
+
+func (c *trackedConn) Close() error {
+	c.l.mu.Lock()
+	delete(c.l.conns, c.Conn)
+	c.l.mu.Unlock()
+	return c.Conn.Close()
+}
 
 func (s *Server) stop() {
 	if s.srv != nil {
@@ -137,6 +195,45 @@ func (s *Server) Login(username, password, deviceID string) (api.Session, error)
 		Username: username, Password: password, DeviceID: deviceID, DeviceName: deviceID + "-host",
 	}, &sess)
 	return sess, err
+}
+
+// AddUser creates an ordinary user through the administrator API and
+// returns its id.
+func (s *Server) AddUser(t testing.TB, username, password string) int64 {
+	t.Helper()
+	admin, err := s.Login(AdminUsername, AdminPassword, "servertest-admin")
+	if err != nil {
+		t.Fatalf("add user %q: log in as administrator: %v", username, err)
+	}
+	var u api.AdminUser
+	err = s.Do(http.MethodPost, api.PathAdminUsers, admin.AccessToken, api.CreateUserRequest{Username: username, Password: password}, &u)
+	if err != nil {
+		t.Fatalf("add user %q: %v", username, err)
+	}
+	return u.ID
+}
+
+// DisableUser disables a user through the administrator API.
+func (s *Server) DisableUser(t testing.TB, username string) {
+	t.Helper()
+	admin, err := s.Login(AdminUsername, AdminPassword, "servertest-admin")
+	if err != nil {
+		t.Fatalf("disable user %q: log in as administrator: %v", username, err)
+	}
+	var users []api.AdminUser
+	if err := s.Do(http.MethodGet, api.PathAdminUsers, admin.AccessToken, nil, &users); err != nil {
+		t.Fatalf("disable user %q: list users: %v", username, err)
+	}
+	for _, u := range users {
+		if u.Username == username {
+			err := s.Do(http.MethodPut, api.PathAdminUser(u.ID)+api.AdminUserDisabled, admin.AccessToken, api.SetDisabledRequest{Disabled: true}, nil)
+			if err != nil {
+				t.Fatalf("disable user %q: %v", username, err)
+			}
+			return
+		}
+	}
+	t.Fatalf("disable user %q: no such user", username)
 }
 
 // ErrorCode returns the API error code of err, or "" if err is not an API error.

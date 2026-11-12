@@ -22,12 +22,22 @@ type Config struct {
 	// none exists. They are ignored once an administrator exists.
 	AdminUsername string
 	AdminPassword string
+	// RelayPeers are the relay node addresses handed to devices in their
+	// network configuration.
+	RelayPeers []string
+	// RelayToken authorizes the relay node to read the relay whitelist
+	// (api.PathRelayNetworks). Empty disables that endpoint.
+	RelayToken string
 }
 
 type Server struct {
-	db    *sql.DB
-	clock clock.Clock
-	mux   *http.ServeMux
+	db         *sql.DB
+	clock      clock.Clock
+	mux        *http.ServeMux
+	relayPeers []string
+	relayToken string
+	hub        *hub
+	liveness   *liveness
 }
 
 func New(cfg Config) (*Server, error) {
@@ -38,8 +48,15 @@ func New(cfg Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{db: db, clock: cfg.Clock}
+	s := &Server{
+		db: db, clock: cfg.Clock, relayPeers: cfg.RelayPeers, relayToken: cfg.RelayToken,
+		hub: newHub(), liveness: newLiveness(),
+	}
 	if err := s.ensureAdministrator(cfg.AdminUsername, cfg.AdminPassword); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err := s.endAllMemberships(); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -49,13 +66,25 @@ func New(cfg Config) (*Server, error) {
 
 func (s *Server) Handler() http.Handler { return s.mux }
 
-func (s *Server) Close() error { return s.db.Close() }
+// Close disconnects every device's realtime channel and closes the database.
+func (s *Server) Close() error {
+	s.liveness.stopAll()
+	s.hub.closeAll()
+	return s.db.Close()
+}
 
 func (s *Server) routes() {
 	s.mux = http.NewServeMux()
 	s.mux.HandleFunc("POST "+api.PathLogin, s.handleLogin)
 	s.mux.HandleFunc("POST "+api.PathRefresh, s.handleRefresh)
 	s.mux.HandleFunc("GET "+api.PathMe, s.authenticated(s.handleMe))
+	s.accountRoutes()
+	s.roomRoutes()
+	s.membershipRoutes()
+	s.relayRoutes()
+	s.realtimeRoutes()
+	s.kickRoutes()
+	s.adminRoomRoutes()
 }
 
 func openDB(path string) (*sql.DB, error) {
@@ -65,9 +94,11 @@ func openDB(path string) (*sql.DB, error) {
 		return nil, err
 	}
 	db.SetMaxOpenConns(1)
-	if _, err := db.Exec(schema); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("migrate: %w", err)
+	for _, ddl := range []string{schema, settingsSchema, roomSchema, membershipSchema} {
+		if _, err := db.Exec(ddl); err != nil {
+			db.Close()
+			return nil, fmt.Errorf("migrate: %w", err)
+		}
 	}
 	return db, nil
 }

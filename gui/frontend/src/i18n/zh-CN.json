@@ -15,7 +15,48 @@
   "home": {
     "loggedInAs": "已登录：{username}",
     "device": "设备：{deviceName}",
-    "empty": "暂无内容"
+    "createRoom": "创建房间",
+    "joinRoom": "加入房间"
+  },
+  "nav": {
+    "home": "主页",
+    "myRooms": "我的房间",
+    "settings": "个人设置",
+    "admin": "管理"
+  },
+  "room": {
+    "code": "房间号",
+    "copy": "复制",
+    "copied": "已复制",
+    "subnet": "网段：{subnet}",
+    "hasPassword": "有密码",
+    "noPassword": "无密码"
+  },
+  "createRoom": {
+    "title": "创建房间",
+    "name": "房间名称",
+    "password": "房间密码（可选）",
+    "passwordHint": "留空表示不设密码",
+    "submit": "创建",
+    "submitting": "正在创建…",
+    "cancel": "取消",
+    "created": "房间已创建，把房间号发给朋友即可加入",
+    "done": "完成"
+  },
+  "myRooms": {
+    "title": "我的房间",
+    "empty": "你还没有创建房间",
+    "rename": "改名",
+    "password": "房间密码",
+    "delete": "删除",
+    "save": "保存",
+    "cancel": "取消",
+    "newName": "新名称",
+    "newPassword": "新房间密码",
+    "setPassword": "设置密码",
+    "removePassword": "取消密码",
+    "confirmDelete": "确定删除房间「{name}」？此操作不可撤销。",
+    "confirm": "确定删除"
   },
   "common": {
     "loading": "正在连接后台服务…",
@@ -29,8 +70,139 @@
     "server_not_configured": "请先填写服务端地址",
     "server_unreachable": "无法连接服务端，请检查地址和网络",
     "server_bad_response": "服务端响应异常，请检查服务端地址",
+    "not_logged_in": "尚未登录，请先登录",
+    "room_not_found": "房间不存在",
+    "room_limit_reached": "房间数已达上限",
+    "not_room_owner": "只有房主可以这样做",
+    "not_room_member": "只有房间成员、房主和管理员可以查看成员",
+    "not_in_room": "当前未在房间中",
+    "copy_failed": "复制失败，请手动复制",
     "daemon_unreachable": "无法连接后台服务，请确认 mokoup2pd 正在运行",
+    "forbidden": "只有管理员可以执行此操作",
+    "user_not_found": "用户不存在",
+    "username_taken": "用户名已存在",
+    "last_admin": "不能取消、禁用或删除最后一个管理员",
+    "room_password_wrong": "房间密码错误",
+    "room_full": "房间已满",
+    "in_other_room": "本设备已在其他房间中，请先退出",
+    "in_room": "本设备已在房间中，请先退出当前房间",
+    "engine_failed": "网络组件启动失败，已退出房间",
     "internal": "发生内部错误",
-    "unknown": "发生未知错误"
+    "unknown": "发生未知错误",
+    "member_not_found": "该设备不在这个房间中",
+    "engine_dependency_missing": "缺少网络组件依赖，已退出房间。Windows 上请先安装 Npcap（https://npcap.com），安装时勾选默认选项即可。"
+  },
+  "settings": {
+    "deviceTitle": "设备名",
+    "deviceName": "设备名",
+    "deviceHint": "房间里的其他成员会看到这个名字",
+    "saveDeviceName": "保存",
+    "deviceNameSaved": "设备名已保存",
+    "passwordTitle": "修改密码",
+    "oldPassword": "旧密码",
+    "newPassword": "新密码",
+    "confirmPassword": "再次输入新密码",
+    "changePassword": "修改密码",
+    "passwordChanged": "密码已修改",
+    "passwordMismatch": "两次输入的新密码不一致",
+    "wrongOldPassword": "旧密码错误",
+    "accountTitle": "账号",
+    "loggedInAs": "当前账号：{username}",
+    "logout": "退出登录",
+    "saving": "正在保存…"
+  },
+  "admin": {
+    "title": "用户管理",
+    "createTitle": "新增用户",
+    "username": "用户名",
+    "initialPassword": "初始密码",
+    "create": "新增",
+    "created": "已新增用户 {username}",
+    "colUsername": "用户名",
+    "colRole": "角色",
+    "colState": "状态",
+    "colActions": "操作",
+    "roleAdmin": "管理员",
+    "roleUser": "普通用户",
+    "stateEnabled": "正常",
+    "stateDisabled": "已禁用",
+    "you": "（你）",
+    "resetPassword": "重置密码",
+    "resetPrompt": "为 {username} 设置新密码",
+    "resetDone": "已重置 {username} 的密码",
+    "confirmReset": "确定",
+    "cancel": "取消",
+    "disable": "禁用",
+    "enable": "启用",
+    "makeAdmin": "设为管理员",
+    "revokeAdmin": "取消管理员",
+    "delete": "删除",
+    "confirmDelete": "确定删除用户 {username}？其作为房主的房间也会一并删除。",
+    "loading": "正在加载…",
+    "tab": {
+      "users": "用户管理",
+      "rooms": "所有房间",
+      "settings": "系统设置"
+    }
+  },
+  "joinRoom": {
+    "title": "加入房间",
+    "codePlaceholder": "例如 K7QH-3MXP",
+    "password": "房间密码",
+    "passwordHint": "房间没有密码时留空",
+    "submit": "加入",
+    "submitting": "正在加入…",
+    "cancel": "取消"
+  },
+  "currentRoom": {
+    "virtualIp": "本机虚拟 IP",
+    "subnet": "网段",
+    "owner": "房主",
+    "leave": "退出房间",
+    "leaving": "正在退出…",
+    "joining": "正在加入房间…",
+    "disconnected": "与服务端的连接已断开，正在重连…",
+    "membersTitle": "成员（{count}）",
+    "colMember": "用户名 / 设备名",
+    "colVirtualIp": "虚拟 IP",
+    "self": "本机",
+    "kick": "移出",
+    "kickConfirm": "确定把 {member} 移出房间吗？",
+    "colPath": "连接",
+    "colLatency": "延迟",
+    "path": {
+      "direct": "直连",
+      "relay": "中转",
+      "unknown": "连接中"
+    },
+    "latency": "{ms} ms"
+  },
+  "tray": {
+    "show": "显示主窗口",
+    "quit": "退出"
+  },
+  "notices": {
+    "kicked": "你已被房主移出房间",
+    "room_deleted": "房间已被删除",
+    "account_disabled": "账号已被管理员禁用",
+    "account_deleted": "账号已被管理员删除"
+  },
+  "adminRooms": {
+    "title": "所有房间",
+    "reload": "刷新",
+    "empty": "还没有房间",
+    "colName": "房间名",
+    "colCode": "房间号",
+    "colOwner": "房主",
+    "colOnline": "在线成员",
+    "confirmDelete": "确定删除房间「{name}」（{code}）？在线成员会立即断开。"
+  },
+  "adminSettings": {
+    "title": "系统设置",
+    "roomsPerUser": "每个用户最多可创建的房间数（1–1000）",
+    "roomCapacity": "每个房间最多容纳的设备数（1–254）",
+    "hint": "修改后对之后的创建房间和加入房间生效，不影响已在房间中的设备。",
+    "save": "保存",
+    "saved": "已保存"
   }
 }

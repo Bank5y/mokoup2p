@@ -16,6 +16,14 @@ import (
 
 const Hostname = "test-host"
 
+// HeartbeatInterval is how often test daemons send heartbeats, in real time.
+// The test server's heartbeat timeout runs on its fake clock, so heartbeats
+// only matter in between clock advances.
+const HeartbeatInterval = 10 * time.Millisecond
+
+// PeerPollInterval is how often test daemons read the fake engine's peers.
+const PeerPollInterval = 10 * time.Millisecond
+
 type Daemon struct {
 	IPC        *ipc.Client
 	Engine     *enginetest.Fake
@@ -60,7 +68,10 @@ func (d *Daemon) start(t testing.TB) {
 		Engine:   d.Engine,
 		Hostname: func() (string, error) { return Hostname, nil },
 		// Retry quickly so tests that restore the server don't wait.
-		AutoLoginRetry: 20 * time.Millisecond,
+		AutoLoginRetry:    20 * time.Millisecond,
+		HeartbeatInterval: HeartbeatInterval,
+		ReconnectDelay:    20 * time.Millisecond,
+		PeerPollInterval:  PeerPollInterval,
 	})
 	if err != nil {
 		t.Fatalf("new daemon: %v", err)

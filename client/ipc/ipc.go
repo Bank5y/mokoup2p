@@ -1,5 +1,6 @@
 // Package ipc is the local API between the client daemon and its front ends
-// (CLI, GUI): JSON over HTTP on a Unix socket (Linux).
+// (CLI, GUI): JSON over HTTP on a Unix socket (Linux) or a named pipe
+// (Windows).
 package ipc
 
 import (
@@ -9,8 +10,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
-	"path/filepath"
+	"strconv"
 
 	"github.com/Bank5y/mokoup2p/api"
 )
@@ -44,6 +44,17 @@ type Status struct {
 	IsAdmin    bool   `json:"isAdmin,omitempty"`
 	DeviceID   string `json:"deviceId"`
 	DeviceName string `json:"deviceName"`
+	// Room is set in StateInRoom.
+	Room *CurrentRoom `json:"room,omitempty"`
+	// Notice, when set, says why the device last left a room on its own.
+	Notice Notice `json:"notice,omitempty"`
+	// Connected reports whether the realtime connection to the server is
+	// up. While it is down the daemon keeps reconnecting; a room survives
+	// if it comes back within api.HeartbeatTimeout.
+	Connected bool `json:"connected"`
+	// Revision changes whenever anything shown in the status changes, or
+	// the members of the current room change. See WaitStatus.
+	Revision uint64 `json:"revision"`
 }
 
 type SetServerRequest struct {
@@ -55,17 +66,6 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-// DefaultSocketPath is where the daemon listens for the current user.
-func DefaultSocketPath() string {
-	if p := os.Getenv("MOKOUP2P_SOCKET"); p != "" {
-		return p
-	}
-	if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
-		return filepath.Join(dir, "mokoup2p", "daemon.sock")
-	}
-	return filepath.Join(os.TempDir(), fmt.Sprintf("mokoup2p-%d", os.Getuid()), "daemon.sock")
-}
-
 // Client talks to the daemon.
 type Client struct {
 	http *http.Client
@@ -74,8 +74,7 @@ type Client struct {
 func NewClient(socketPath string) *Client {
 	return &Client{http: &http.Client{Transport: &http.Transport{
 		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-			var d net.Dialer
-			return d.DialContext(ctx, "unix", socketPath)
+			return dial(ctx, socketPath)
 		},
 	}}}
 }
@@ -85,6 +84,20 @@ func (c *Client) Status(ctx context.Context) (Status, error) {
 	err := c.do(ctx, http.MethodGet, PathStatus, nil, &st)
 	return st, err
 }
+
+// WaitStatus waits until the status revision differs from revision and
+// returns the new status. The daemon answers after a while (about 25
+// seconds) even if nothing changed, so callers simply call again. Front ends
+// use it to follow changes, such as members joining, as they happen.
+func (c *Client) WaitStatus(ctx context.Context, revision uint64) (Status, error) {
+	var st Status
+	err := c.do(ctx, http.MethodGet, PathStatus+"?"+WaitParam+"="+strconv.FormatUint(revision, 10), nil, &st)
+	return st, err
+}
+
+// WaitParam is the query parameter of GET PathStatus that makes it wait for
+// a revision other than the given one.
+const WaitParam = "wait"
 
 func (c *Client) SetServer(ctx context.Context, url string) (Status, error) {
 	var st Status
@@ -123,7 +136,7 @@ func (c *Client) do(ctx context.Context, method, path string, in, out any) error
 		}
 		return apiErr
 	}
-	if out != nil {
+	if out != nil && resp.StatusCode != http.StatusNoContent {
 		return json.NewDecoder(resp.Body).Decode(out)
 	}
 	return nil
