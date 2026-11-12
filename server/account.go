@@ -50,6 +50,8 @@ func (s *Server) handleLogout(w http.ResponseWriter, _ *http.Request, se session
 		writeError(w, err)
 		return
 	}
+	// The session is gone, so is its right to the realtime channel.
+	s.hub.disconnect(se.devicePK)
 	w.WriteHeader(http.StatusNoContent)
 }
 

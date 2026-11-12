@@ -78,6 +78,33 @@ func (h *hub) send(devicePK int64, m api.Message) {
 	}
 }
 
+// closeMarker, queued after a device's last message, makes the write loop
+// close the connection once everything before it has been sent. It never
+// goes on the wire.
+const closeMarker api.MessageType = "\x00close"
+
+// sendThenClose queues m for the device and closes its connection once m
+// has been written: used when the device's session has just been revoked.
+func (h *hub) sendThenClose(devicePK int64, m api.Message) {
+	h.mu.Lock()
+	c := h.conns[devicePK]
+	h.mu.Unlock()
+	if c != nil {
+		c.send(m)
+		c.send(api.Message{Type: closeMarker})
+	}
+}
+
+// disconnect closes the device's connection, if any, right away.
+func (h *hub) disconnect(devicePK int64) {
+	h.mu.Lock()
+	c := h.conns[devicePK]
+	h.mu.Unlock()
+	if c != nil {
+		c.shutdown()
+	}
+}
+
 func (h *hub) closeAll() {
 	h.mu.Lock()
 	conns := h.conns
@@ -113,6 +140,12 @@ func (c *deviceConn) writeLoop() {
 			return
 		case m := <-c.outbox:
 			_ = c.ws.SetWriteDeadline(time.Now().Add(writeTimeout))
+			if m.Type == closeMarker {
+				_ = c.ws.WriteMessage(websocket.CloseMessage,
+					websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "session revoked"))
+				c.shutdown()
+				return
+			}
 			if err := c.ws.WriteJSON(m); err != nil {
 				c.shutdown()
 				return
@@ -162,6 +195,17 @@ func (s *Server) push(devicePK int64, t api.MessageType, data any) {
 		return
 	}
 	s.hub.send(devicePK, api.Message{Type: t, Data: raw})
+}
+
+// pushThenClose sends an event to one device and then closes its realtime
+// connection: its session has been revoked, so it may not keep the channel.
+func (s *Server) pushThenClose(devicePK int64, t api.MessageType, data any) {
+	raw, err := json.Marshal(data)
+	if err != nil {
+		log.Printf("realtime: encode %s: %v", t, err)
+		return
+	}
+	s.hub.sendThenClose(devicePK, api.Message{Type: t, Data: raw})
 }
 
 // pushToRoom sends an event to every member of a room except one device.

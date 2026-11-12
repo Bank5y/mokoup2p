@@ -1,6 +1,7 @@
 package server_test
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -203,4 +204,27 @@ func TestOutsidersGetNoMemberEvents(t *testing.T) {
 	mustJoin(t, s, alice, room.Code, "")
 
 	bobEvents.ExpectNone(t, api.EventMemberJoined, quiet)
+}
+
+func TestLoggingOutClosesTheDevicesRealtimeConnection(t *testing.T) {
+	s := servertest.Start(t)
+	alice := mustLoginAs(t, s, "alice")
+	events := s.MustConnectEvents(t, alice)
+
+	if err := s.Do(http.MethodPost, api.PathLogout, alice.AccessToken, nil, nil); err != nil {
+		t.Fatalf("logout: %v", err)
+	}
+
+	events.ExpectClosed(t)
+}
+
+func TestDisablingAUserDeliversThePushThenClosesItsConnections(t *testing.T) {
+	s := servertest.Start(t)
+	alice := mustLoginAs(t, s, "alice")
+	events := s.MustConnectEvents(t, alice)
+
+	s.DisableUser(t, "alice")
+
+	events.Expect(t, api.EventAccountDisabled, nil)
+	events.ExpectClosed(t)
 }

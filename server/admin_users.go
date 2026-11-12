@@ -144,7 +144,7 @@ func (s *Server) handleSetDisabled(w http.ResponseWriter, r *http.Request, _ ses
 	}, `UPDATE users SET disabled = ? WHERE id = ?`, req.Disabled, id)
 	if err == nil {
 		for _, pk := range devices {
-			s.push(pk, api.EventAccountDisabled, nil)
+			s.pushThenClose(pk, api.EventAccountDisabled, nil)
 		}
 		s.announceDepartures(ended, api.LeftWhenDisabled)
 	}
@@ -219,7 +219,7 @@ func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request, _ sess
 		return
 	}
 	for _, pk := range devices {
-		s.push(pk, api.EventAccountDeleted, nil)
+		s.pushThenClose(pk, api.EventAccountDeleted, nil)
 	}
 	s.announceDepartures(ended, api.LeftWhenDeleted)
 	for code, members := range ownedRooms {
