@@ -3,6 +3,7 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"net/netip"
 	"time"
 )
@@ -30,6 +31,10 @@ type Engine interface {
 	// an empty list when the engine is not running.
 	Peers(ctx context.Context) ([]Peer, error)
 }
+
+// ErrDependencyMissing is wrapped by Start errors when something the engine
+// needs is not installed on this machine (e.g. Npcap on Windows).
+var ErrDependencyMissing = errors.New("engine dependency missing")
 
 // Config is what the engine needs to join a room's virtual network.
 type Config struct {

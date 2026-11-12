@@ -9,7 +9,7 @@
 | `api/` | 服务端与客户端共享的 HTTP API 类型和错误码 |
 | `server/` | 服务端（Go，SQLite）；`server/servertest` 是接缝 1 测试装置 |
 | `client/daemon/` | 客户端后台服务；`client/daemontest` 是接缝 2 测试装置 |
-| `client/ipc/` | 后台服务与 CLI / GUI 之间的本地 IPC（Linux 上为 Unix 套接字） |
+| `client/ipc/` | 后台服务与 CLI / GUI 之间的本地 IPC（Linux 上为 Unix 套接字，Windows 上为命名管道） |
 | `client/engine/` | 网络引擎接口；`easytier` 是生产实现（`easytier-core` 子进程），`enginetest` 是伪造实现 |
 | `cmd/mokoup2p-server` | 服务端程序 |
 | `cmd/mokoup2pd` | 后台服务程序 |
@@ -17,6 +17,7 @@
 | `cmd/mokoup2p-relay` | 中转节点包装进程：同步网络白名单并管理 `easytier-core` |
 | `gui/` | Wails + Vue 3 GUI（独立 Go 模块） |
 | `deploy/` | Dockerfile、docker-compose、systemd 单元、接缝 3 冒烟测试（`deploy/smoketest`） |
+| `packaging/` | 客户端安装包：`build.sh`、锁定版本、nfpm 配置与 Linux 安装脚本、NSIS 脚本 |
 
 ## 部署服务端
 
@@ -38,6 +39,12 @@ docker-compose 启动两个服务：服务端（`server`）和 EasyTier 中转�
 | `MOKOUP2P_RELAY_TOKEN` | 服务端与中转节点之间的共享令牌，随便取一个随机串，重启时保持不变 |
 
 中转节点只为本服务端登记过的房间中转：它定期向服务端拉取所有房间的网络名作为 EasyTier 的网络白名单，名单变化时重启自身的 `easytier-core`（见 [ADR-0002](docs/adr/0002-relay-whitelist-sync.md)）。数据保存在 `server-data` 数据卷中。服务端只提供 HTTP，请在前面放置反向代理（如 Caddy）提供 HTTPS。
+
+完整的部署说明（Caddy HTTPS 示例、备份与恢复、升级、许可）见 [docs/deploy.md](docs/deploy.md)。
+
+## 安装包
+
+`packaging/build.sh 0.1.0` 在 `dist/` 中生成 Windows NSIS 安装包、Linux `.deb` / `.rpm` 和 tar.gz（x86_64、arm64），内含锁定版本的 EasyTier（版本与校验和在 `packaging/versions.env`）。需要 Go、npm、curl、unzip 和 Docker（makensis 与 Linux GUI 在容器中构建）。Windows 用户需另行安装 [Npcap](https://npcap.com)（[ADR-0004](docs/adr/0004-npcap-dependency.md)）。第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 客户端（Linux）
 

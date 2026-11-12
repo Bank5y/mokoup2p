@@ -17,6 +17,7 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 
 	"github.com/Bank5y/mokoup2p/client/daemon"
+	"github.com/Bank5y/mokoup2p/client/engine/easytier"
 	"github.com/Bank5y/mokoup2p/client/ipc"
 )
 
@@ -226,4 +227,16 @@ func uninstall() error {
 	}
 	fmt.Printf("已删除服务 %s\n", serviceName)
 	return nil
+}
+
+// platformEngineOptions sets up easytier-core for Windows:
+//   - Windows sends 255.255.255.255 out of the physical NIC only; EasyTier's
+//     UDP broadcast relay copies such broadcasts into the room (ADR-0003).
+//   - easytier-core v2.6.4 cannot start without Npcap's Packet.dll, which we
+//     may not redistribute: the user installs Npcap, which puts it in
+//     System32\Npcap (ADR-0004). This is the one place that knows about it.
+func platformEngineOptions(o *easytier.Options) {
+	o.UDPBroadcastRelay = true
+	o.RequiredLibraries = []string{"Packet.dll"}
+	o.DLLSearchDirs = []string{filepath.Join(os.Getenv("SystemRoot"), "System32", "Npcap")}
 }

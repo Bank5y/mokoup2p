@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -79,7 +80,11 @@ func (d *Daemon) join(ctx context.Context, req ipc.JoinRequest) error {
 		log.Printf("engine start: %v", err)
 		d.stopEngine()
 		d.leaveOnServer(ctx)
-		return &api.Error{Code: ipc.ErrEngineFailed, Message: err.Error()}
+		code := ipc.ErrEngineFailed
+		if errors.Is(err, engine.ErrDependencyMissing) {
+			code = ipc.ErrEngineDependencyMissing
+		}
+		return &api.Error{Code: code, Message: err.Error()}
 	}
 
 	d.mu.Lock()

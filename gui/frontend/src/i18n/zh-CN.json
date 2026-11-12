@@ -89,7 +89,8 @@
     "engine_failed": "网络组件启动失败，已退出房间",
     "internal": "发生内部错误",
     "unknown": "发生未知错误",
-    "member_not_found": "该设备不在这个房间中"
+    "member_not_found": "该设备不在这个房间中",
+    "engine_dependency_missing": "缺少网络组件依赖，已退出房间。Windows 上请先安装 Npcap（https://npcap.com），安装时勾选默认选项即可。"
   },
   "settings": {
     "deviceTitle": "设备名",

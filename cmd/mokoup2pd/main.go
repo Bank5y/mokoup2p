@@ -34,14 +34,13 @@ func run(ctx context.Context, stateDir string, listen func() (net.Listener, stri
 		return fmt.Errorf("create state directory: %w", err)
 	}
 	etDir := easytierDir()
-	eng := easytier.New(easytier.Options{
+	opts := easytier.Options{
 		CorePath: filepath.Join(etDir, "easytier-core"+exeSuffix),
 		CLIPath:  filepath.Join(etDir, "easytier-cli"+exeSuffix),
 		PIDFile:  filepath.Join(stateDir, "easytier-core.pid"),
-		// Windows sends 255.255.255.255 out of the physical NIC only; let
-		// EasyTier copy such broadcasts into the room (ADR-0003).
-		UDPBroadcastRelay: runtime.GOOS == "windows",
-	})
+	}
+	platformEngineOptions(&opts)
+	eng := easytier.New(opts)
 
 	d, err := daemon.New(daemon.Config{StateDir: stateDir, Engine: eng})
 	if err != nil {
