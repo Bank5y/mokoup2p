@@ -6,8 +6,8 @@ import (
 )
 
 // System settings are adjustable limits stored as integers by name. A setting
-// that was never written has its default value. The admin API to read and
-// change them comes with the administration ticket (#10).
+// that was never written has its default value. Administrators read and
+// change them through api.PathAdminSettings (admin_rooms.go).
 const settingsSchema = `
 CREATE TABLE IF NOT EXISTS settings (
 	key   TEXT PRIMARY KEY,

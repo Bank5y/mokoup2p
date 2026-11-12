@@ -189,7 +189,12 @@ body { margin: 0; }
   margin: 0 auto;
   padding: var(--space-4) var(--space-4) var(--space-8);
 }
-.page > .form, .page > .notice, .page > .table { margin-bottom: var(--space-4); }
+.page > .form, .page > .notice, .page > .table,
+.panel-body > .form, .panel-body > .notice, .panel-body > .table { margin-bottom: var(--space-4); }
+.panel-body > .section-title:first-child,
+.panel-body > .panel-header:first-child .section-title { margin-top: var(--space-2); }
+.tabs { display: flex; gap: var(--space-2); border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-2); }
+.hint-left { text-align: left; }
 .section-title { margin: var(--space-6) 0 var(--space-3); font-size: 16px; font-weight: 600; }
 .page > .section-title:first-child { margin-top: var(--space-2); }
 .field-hint { color: var(--color-text-muted); font-size: 12px; }

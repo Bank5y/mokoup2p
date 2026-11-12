@@ -52,6 +52,12 @@ const (
 	// EventNetworkChanged (NetworkChanged) goes to every member when the
 	// room's network key was replaced; members restart their engine with it.
 	EventNetworkChanged MessageType = "network_changed"
+	// EventAccountDisabled (no data) goes to every device of a user an
+	// administrator disabled; the device's session is already revoked.
+	EventAccountDisabled MessageType = "account_disabled"
+	// EventAccountDeleted (no data) goes to every device of a user an
+	// administrator deleted.
+	EventAccountDeleted MessageType = "account_deleted"
 )
 
 // RoomEvent concerns the receiving device's membership of Room.
@@ -81,6 +87,7 @@ const (
 	LeftByTimeout    LeaveReason = "heartbeat_timeout" // no heartbeat for HeartbeatTimeout
 	LeftWhenDisabled LeaveReason = "account_disabled"  // its user was disabled
 	LeftByKick       LeaveReason = "kicked"            // the room owner kicked it
+	LeftWhenDeleted  LeaveReason = "account_deleted"   // its user was deleted
 )
 
 // MemberLeft: a device is no longer a member of Room.

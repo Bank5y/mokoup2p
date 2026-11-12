@@ -3,6 +3,7 @@ package ipc
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/Bank5y/mokoup2p/api"
@@ -13,9 +14,12 @@ const (
 	PathDeviceName = "/v1/device-name"
 	PathLogout     = "/v1/logout"
 
-	// PathAdminUsers and everything below it are relayed to the server's
-	// administrator user API (api.PathAdminUsers) unchanged.
-	PathAdminUsers = "/v1/admin/users"
+	// PathAdmin and everything below it are relayed to the server's
+	// administrator API (below /api/v1/admin) unchanged.
+	PathAdmin         = "/v1/admin"
+	PathAdminUsers    = PathAdmin + "/users"
+	PathAdminRooms    = PathAdmin + "/rooms"
+	PathAdminSettings = PathAdmin + "/settings"
 )
 
 // PathAdminUser is the IPC path of one user; see api.PathAdminUser.
@@ -78,4 +82,30 @@ func (c *Client) SetUserAdmin(ctx context.Context, id int64, isAdmin bool) (api.
 
 func (c *Client) DeleteUser(ctx context.Context, id int64) error {
 	return c.do(ctx, http.MethodDelete, PathAdminUser(id), nil, nil)
+}
+
+// AllRooms lists every room (administrators only).
+func (c *Client) AllRooms(ctx context.Context) ([]api.AdminRoom, error) {
+	var list api.AdminRoomList
+	err := c.do(ctx, http.MethodGet, PathAdminRooms, nil, &list)
+	return list.Rooms, err
+}
+
+// AdminDeleteRoom deletes any room (administrators only).
+func (c *Client) AdminDeleteRoom(ctx context.Context, code string) error {
+	return c.do(ctx, http.MethodDelete, PathAdminRooms+"/"+url.PathEscape(code), nil, nil)
+}
+
+// Settings reads the system settings (administrators only).
+func (c *Client) Settings(ctx context.Context) (api.Settings, error) {
+	var st api.Settings
+	err := c.do(ctx, http.MethodGet, PathAdminSettings, nil, &st)
+	return st, err
+}
+
+// SetSettings replaces the system settings (administrators only).
+func (c *Client) SetSettings(ctx context.Context, st api.Settings) (api.Settings, error) {
+	var out api.Settings
+	err := c.do(ctx, http.MethodPut, PathAdminSettings, st, &out)
+	return out, err
 }

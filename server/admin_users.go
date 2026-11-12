@@ -123,6 +123,7 @@ func (s *Server) handleSetDisabled(w http.ResponseWriter, r *http.Request, _ ses
 		return
 	}
 	var ended []membership
+	var devices []int64
 	err := s.updateUser(id, func(tx *sql.Tx) error {
 		if !req.Disabled {
 			return nil
@@ -133,16 +134,18 @@ func (s *Server) handleSetDisabled(w http.ResponseWriter, r *http.Request, _ ses
 		if _, err := tx.Exec(`DELETE FROM tokens WHERE device_pk IN (SELECT id FROM devices WHERE user_id = ?)`, id); err != nil {
 			return err
 		}
-		// The user's devices leave their rooms. Telling the devices
-		// themselves is #10's job (account disabled push).
-		devices, err := userDevices(tx, id)
-		if err != nil {
+		// The user's devices leave their rooms and are told why.
+		var err error
+		if devices, err = userDevices(tx, id); err != nil {
 			return err
 		}
 		ended, err = endMemberships(tx, devices...)
 		return err
 	}, `UPDATE users SET disabled = ? WHERE id = ?`, req.Disabled, id)
 	if err == nil {
+		for _, pk := range devices {
+			s.push(pk, api.EventAccountDisabled, nil)
+		}
 		s.announceDepartures(ended, api.LeftWhenDisabled)
 	}
 	s.respondUser(w, err, id)
@@ -191,11 +194,38 @@ func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request, _ sess
 	if !ok {
 		return
 	}
-	err := s.updateUser(id, func(tx *sql.Tx) error { return ensureOtherAdmin(tx, id) },
-		`DELETE FROM users WHERE id = ?`, id)
+	// Deleting cascades to the user's devices and rooms; first collect who
+	// has to be told: the user's devices, the rooms they were in, and the
+	// members of the rooms the user owned.
+	var devices []int64
+	var ended []membership
+	var ownedRooms map[string][]api.Member
+	err := s.updateUser(id, func(tx *sql.Tx) error {
+		if err := ensureOtherAdmin(tx, id); err != nil {
+			return err
+		}
+		var err error
+		if devices, err = userDevices(tx, id); err != nil {
+			return err
+		}
+		if ended, err = endMemberships(tx, devices...); err != nil {
+			return err
+		}
+		ownedRooms, err = ownedRoomMembers(tx, id)
+		return err
+	}, `DELETE FROM users WHERE id = ?`, id)
 	if err != nil {
 		writeError(w, err)
 		return
+	}
+	for _, pk := range devices {
+		s.push(pk, api.EventAccountDeleted, nil)
+	}
+	s.announceDepartures(ended, api.LeftWhenDeleted)
+	for code, members := range ownedRooms {
+		for _, m := range members {
+			s.push(m.ID, api.EventRoomDeleted, api.RoomEvent{Room: code})
+		}
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

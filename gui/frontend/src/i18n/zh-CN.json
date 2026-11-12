@@ -22,7 +22,7 @@
     "home": "主页",
     "myRooms": "我的房间",
     "settings": "个人设置",
-    "admin": "用户管理"
+    "admin": "管理"
   },
   "room": {
     "code": "房间号",
@@ -137,7 +137,12 @@
     "revokeAdmin": "取消管理员",
     "delete": "删除",
     "confirmDelete": "确定删除用户 {username}？其作为房主的房间也会一并删除。",
-    "loading": "正在加载…"
+    "loading": "正在加载…",
+    "tab": {
+      "users": "用户管理",
+      "rooms": "所有房间",
+      "settings": "系统设置"
+    }
   },
   "joinRoom": {
     "title": "加入房间",
@@ -170,6 +175,25 @@
   "notices": {
     "kicked": "你已被房主移出房间",
     "room_deleted": "房间已被删除",
-    "account_disabled": "账号已被管理员禁用"
+    "account_disabled": "账号已被管理员禁用",
+    "account_deleted": "账号已被管理员删除"
+  },
+  "adminRooms": {
+    "title": "所有房间",
+    "reload": "刷新",
+    "empty": "还没有房间",
+    "colName": "房间名",
+    "colCode": "房间号",
+    "colOwner": "房主",
+    "colOnline": "在线成员",
+    "confirmDelete": "确定删除房间「{name}」（{code}）？在线成员会立即断开。"
+  },
+  "adminSettings": {
+    "title": "系统设置",
+    "roomsPerUser": "每个用户最多可创建的房间数（1–1000）",
+    "roomCapacity": "每个房间最多容纳的设备数（1–254）",
+    "hint": "修改后对之后的创建房间和加入房间生效，不影响已在房间中的设备。",
+    "save": "保存",
+    "saved": "已保存"
   }
 }

@@ -40,6 +40,7 @@ const (
 	NoticeKicked          Notice = "kicked"           // the room owner kicked this device
 	NoticeRoomDeleted     Notice = "room_deleted"     // the room was deleted
 	NoticeAccountDisabled Notice = "account_disabled" // an administrator disabled the account
+	NoticeAccountDeleted  Notice = "account_deleted"  // an administrator deleted the account
 )
 
 // KickRequest asks the room owner's daemon to kick a member (Member.ID).

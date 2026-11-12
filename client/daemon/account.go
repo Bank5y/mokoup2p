@@ -17,8 +17,7 @@ func (d *Daemon) accountRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT "+ipc.PathPassword, d.handleChangePassword)
 	mux.HandleFunc("PUT "+ipc.PathDeviceName, d.handleSetDeviceName)
 	mux.HandleFunc("POST "+ipc.PathLogout, d.handleLogout)
-	mux.HandleFunc(ipc.PathAdminUsers, d.handleAdminRelay)
-	mux.HandleFunc(ipc.PathAdminUsers+"/", d.handleAdminRelay)
+	mux.HandleFunc(ipc.PathAdmin+"/", d.handleAdminRelay)
 }
 
 // logOutLocally forgets the session; d.mu must be held. A room the device is
@@ -124,10 +123,10 @@ func (d *Daemon) handleLogout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, d.status())
 }
 
-// handleAdminRelay forwards administrator user management to the server
-// unchanged; the server enforces every rule.
+// handleAdminRelay forwards administrator requests (users, rooms, settings)
+// to the server unchanged; the server enforces every rule.
 func (d *Daemon) handleAdminRelay(w http.ResponseWriter, r *http.Request) {
-	path := api.PathAdminUsers + strings.TrimPrefix(r.URL.Path, ipc.PathAdminUsers)
+	path := "/api" + r.URL.EscapedPath()
 	var in any
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
