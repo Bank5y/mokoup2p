@@ -36,6 +36,10 @@ type Config struct {
 	// ReconnectDelay is the first delay before reconnecting the realtime
 	// connection; it doubles up to a third of api.HeartbeatTimeout. Default 1s.
 	ReconnectDelay time.Duration
+	// PeerPollInterval is how often the daemon reads the engine's peers
+	// while in a room, to notice members switching between direct and
+	// relay. Default 2s.
+	PeerPollInterval time.Duration
 }
 
 type Daemon struct {
@@ -78,6 +82,9 @@ func New(cfg Config) (*Daemon, error) {
 	if cfg.Hostname == nil {
 		cfg.Hostname = os.Hostname
 	}
+	if cfg.PeerPollInterval <= 0 {
+		cfg.PeerPollInterval = 2 * time.Second
+	}
 	if cfg.AutoLoginRetry <= 0 {
 		cfg.AutoLoginRetry = 2 * time.Second
 	}
@@ -119,10 +126,14 @@ func (d *Daemon) Start(ctx context.Context) {
 		log.Printf("engine cleanup: %v", err)
 	}
 	ctx, d.stop = context.WithCancel(context.WithoutCancel(ctx))
-	d.background.Add(1)
+	d.background.Add(2)
 	go func() {
 		defer d.background.Done()
 		d.runRealtime(ctx)
+	}()
+	go func() {
+		defer d.background.Done()
+		d.watchPaths(ctx)
 	}()
 	err := d.autoLogin(ctx)
 	if err == nil {

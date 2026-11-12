@@ -21,6 +21,9 @@ const Hostname = "test-host"
 // only matter in between clock advances.
 const HeartbeatInterval = 10 * time.Millisecond
 
+// PeerPollInterval is how often test daemons read the fake engine's peers.
+const PeerPollInterval = 10 * time.Millisecond
+
 type Daemon struct {
 	IPC        *ipc.Client
 	Engine     *enginetest.Fake
@@ -68,6 +71,7 @@ func (d *Daemon) start(t testing.TB) {
 		AutoLoginRetry:    20 * time.Millisecond,
 		HeartbeatInterval: HeartbeatInterval,
 		ReconnectDelay:    20 * time.Millisecond,
+		PeerPollInterval:  PeerPollInterval,
 	})
 	if err != nil {
 		t.Fatalf("new daemon: %v", err)

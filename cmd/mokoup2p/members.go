@@ -58,14 +58,38 @@ func cmdMembers(ctx context.Context, c *ipc.Client, args []string) error {
 
 func printMembers(members []ipc.Member) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
-	fmt.Fprintln(w, "用户名 / 设备名\t虚拟 IP\t")
+	fmt.Fprintln(w, "用户名 / 设备名\t虚拟 IP\t连接\t延迟\t")
 	for _, m := range members {
 		self := ""
 		if m.Self {
 			self = "（本机）"
 		}
-		fmt.Fprintf(w, "%s / %s%s\t%s\t\n", m.Username, m.DeviceName, self, m.VirtualIP)
+		fmt.Fprintf(w, "%s / %s%s\t%s\t%s\t%s\t\n", m.Username, m.DeviceName, self, m.VirtualIP, pathText(m), latencyText(m))
 	}
 	w.Flush()
 	fmt.Printf("共 %d 台设备\n", len(members))
+}
+
+// pathText says how this device reaches the member.
+func pathText(m ipc.Member) string {
+	switch {
+	case m.Self:
+		return "-"
+	case m.Path == ipc.PathDirect:
+		return "直连"
+	case m.Path == ipc.PathRelay:
+		return "中转"
+	default:
+		return "连接中"
+	}
+}
+
+func latencyText(m ipc.Member) string {
+	if m.Self || m.LatencyMs <= 0 {
+		return "-"
+	}
+	if m.LatencyMs < 10 {
+		return fmt.Sprintf("%.1f ms", m.LatencyMs)
+	}
+	return fmt.Sprintf("%.0f ms", m.LatencyMs)
 }

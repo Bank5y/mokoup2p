@@ -363,5 +363,6 @@ func (d *Daemon) handleMembers(w http.ResponseWriter, r *http.Request) {
 			Self:       m.VirtualIP == room.VirtualIP,
 		})
 	}
+	d.addPaths(r.Context(), out.Members)
 	writeJSON(w, http.StatusOK, out)
 }

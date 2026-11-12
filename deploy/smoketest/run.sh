@@ -4,7 +4,8 @@
 #   1. the devices ping each other's virtual IP over a direct path;
 #   2. UDP broadcast reaches the other device through the virtual network;
 #   3. blocking the direct path switches to the relay without breaking a
-#      TCP connection, and unblocking switches back to direct;
+#      TCP connection, and unblocking switches back to direct; the daemon's
+#      member list (mokoup2p members) reports each path;
 #   4. a network the server never registered cannot use the relay.
 # Needs docker with compose v2 and /dev/net/tun; no root on the host.
 #
@@ -52,6 +53,12 @@ path() {
 }
 path_is() { [ "$(path "$1" "$2")" = "$3" ]; }
 
+# shown SVC PEER_VIP: the member's row of `mokoup2p members`, i.e. what the
+# daemon reports after merging the engine's peers into the member list.
+shown() { on "$1" mokoup2p members | grep -F " $2 " | tr -s ' '; }
+# shows SVC PEER_VIP TEXT: that row contains TEXT (直连 / 中转).
+shows() { shown "$1" "$2" | grep -qF "$3"; }
+
 step "build and start"
 compose up -d --build --quiet-pull
 
@@ -81,6 +88,12 @@ if wait_for 60 "direct path" path_is client1 "$vip2" direct; then
 	pass "client1 -> client2 path is direct"
 else
 	fail "client1 -> client2 path is $(path client1 "$vip2"), want direct"
+fi
+if wait_for 10 "daemon shows direct" shows client1 "$vip2" 直连 &&
+	shown client1 "$vip2" | grep -qE '[0-9.]+ ms'; then
+	pass "mokoup2p members shows the direct path and a latency: $(shown client1 "$vip2")"
+else
+	fail "mokoup2p members shows: $(shown client1 "$vip2"), want 直连 with a latency"
 fi
 
 step "2. UDP broadcast"
@@ -153,6 +166,11 @@ if path_is client1 "$vip2" relay; then
 else
 	fail "path is $(path client1 "$vip2") while the direct path is blocked, want relay"
 fi
+if shows client1 "$vip2" 中转; then
+	pass "mokoup2p members shows the relay: $(shown client1 "$vip2")"
+else
+	fail "mokoup2p members shows: $(shown client1 "$vip2"), want 中转"
+fi
 
 on client1 iptables -D INPUT -s "$eth2" -j DROP
 on client1 iptables -D OUTPUT -d "$eth2" -j DROP
@@ -161,6 +179,11 @@ if wait_for 180 "direct path again" path_is client1 "$vip2" direct; then
 	pass "after unblocking, client1 -> client2 is direct again (after $(($(date +%s) - t0))s)"
 else
 	fail "after unblocking, path is $(path client1 "$vip2"), want direct"
+fi
+if wait_for 10 "daemon shows direct again" shows client1 "$vip2" 直连; then
+	pass "mokoup2p members shows the direct path again"
+else
+	fail "mokoup2p members shows: $(shown client1 "$vip2"), want 直连"
 fi
 sleep 2
 on client1 pkill -INT ping || true

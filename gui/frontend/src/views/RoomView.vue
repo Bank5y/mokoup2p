@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { kick, leave, members as listMembers } from '../backend.js'
 import { t, errorText } from '../i18n/index.js'
 import RoomCode from '../components/RoomCode.vue'
@@ -29,8 +29,19 @@ async function loadMembers() {
   }
 }
 
-onMounted(loadMembers)
+// Path switches arrive as a new revision; latencies are refreshed on a timer.
+let timer = null
+onMounted(() => {
+  loadMembers()
+  timer = setInterval(loadMembers, 5000)
+})
+onUnmounted(() => clearInterval(timer))
 watch(() => props.revision, loadMembers)
+
+function latencyText(ms) {
+  if (!ms) return ''
+  return t('currentRoom.latency', { ms: ms < 10 ? ms.toFixed(1) : Math.round(ms) })
+}
 
 async function kickMember(m) {
   if (!window.confirm(t('currentRoom.kickConfirm', { member: `${m.username} / ${m.deviceName}` }))) return
@@ -77,6 +88,8 @@ async function leaveRoom() {
         <tr>
           <th>{{ t('currentRoom.colMember') }}</th>
           <th>{{ t('currentRoom.colVirtualIp') }}</th>
+          <th>{{ t('currentRoom.colPath') }}</th>
+          <th>{{ t('currentRoom.colLatency') }}</th>
           <th v-if="isOwner"></th>
         </tr>
       </thead>
@@ -87,6 +100,12 @@ async function leaveRoom() {
             <span v-if="m.self" class="member-self">{{ t('currentRoom.self') }}</span>
           </td>
           <td class="room-facts-ip">{{ m.virtualIp }}</td>
+          <td>
+            <span v-if="!m.self" class="tag" :class="m.path ? `tag-${m.path}` : ''">
+              {{ t(`currentRoom.path.${m.path || 'unknown'}`) }}
+            </span>
+          </td>
+          <td>{{ m.self ? '' : latencyText(m.latencyMs) }}</td>
           <td v-if="isOwner" class="table-actions">
             <button v-if="!m.self" class="button button-small" type="button" @click="kickMember(m)">
               {{ t('currentRoom.kick') }}
