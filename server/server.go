@@ -36,6 +36,8 @@ type Server struct {
 	mux        *http.ServeMux
 	relayPeers []string
 	relayToken string
+	hub        *hub
+	liveness   *liveness
 }
 
 func New(cfg Config) (*Server, error) {
@@ -46,7 +48,10 @@ func New(cfg Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{db: db, clock: cfg.Clock, relayPeers: cfg.RelayPeers, relayToken: cfg.RelayToken}
+	s := &Server{
+		db: db, clock: cfg.Clock, relayPeers: cfg.RelayPeers, relayToken: cfg.RelayToken,
+		hub: newHub(), liveness: newLiveness(),
+	}
 	if err := s.ensureAdministrator(cfg.AdminUsername, cfg.AdminPassword); err != nil {
 		db.Close()
 		return nil, err
@@ -61,7 +66,12 @@ func New(cfg Config) (*Server, error) {
 
 func (s *Server) Handler() http.Handler { return s.mux }
 
-func (s *Server) Close() error { return s.db.Close() }
+// Close disconnects every device's realtime channel and closes the database.
+func (s *Server) Close() error {
+	s.liveness.stopAll()
+	s.hub.closeAll()
+	return s.db.Close()
+}
 
 func (s *Server) routes() {
 	s.mux = http.NewServeMux()
@@ -72,6 +82,7 @@ func (s *Server) routes() {
 	s.roomRoutes()
 	s.membershipRoutes()
 	s.relayRoutes()
+	s.realtimeRoutes()
 }
 
 func openDB(path string) (*sql.DB, error) {

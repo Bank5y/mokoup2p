@@ -6,9 +6,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -34,6 +36,7 @@ type Server struct {
 	dbPath      string
 	srv         *server.Server
 	http        *httptest.Server
+	conns       *trackingListener
 	unreachable atomic.Bool
 }
 
@@ -83,7 +86,10 @@ func (s *Server) start(t testing.TB, adminUsername, adminPassword string) {
 		srv.Handler().ServeHTTP(w, r)
 	})
 	if s.http == nil {
-		s.http = httptest.NewServer(handler)
+		s.http = httptest.NewUnstartedServer(handler)
+		s.conns = &trackingListener{Listener: s.http.Listener, conns: map[net.Conn]struct{}{}}
+		s.http.Listener = s.conns
+		s.http.Start()
 		s.URL = s.http.URL
 	} else {
 		s.http.Config.Handler = handler
@@ -91,8 +97,54 @@ func (s *Server) start(t testing.TB, adminUsername, adminPassword string) {
 }
 
 // SetUnreachable makes every request fail at the network level (true) or
-// restores normal service (false).
-func (s *Server) SetUnreachable(v bool) { s.unreachable.Store(v) }
+// restores normal service (false). Going unreachable also cuts every open
+// connection, realtime channels included.
+func (s *Server) SetUnreachable(v bool) {
+	s.unreachable.Store(v)
+	if v {
+		s.conns.closeAll()
+	}
+}
+
+// trackingListener remembers accepted connections so they can be cut, even
+// after they were hijacked (as WebSockets are).
+type trackingListener struct {
+	net.Listener
+	mu    sync.Mutex
+	conns map[net.Conn]struct{}
+}
+
+func (l *trackingListener) Accept() (net.Conn, error) {
+	c, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	l.mu.Lock()
+	l.conns[c] = struct{}{}
+	l.mu.Unlock()
+	return &trackedConn{Conn: c, l: l}, nil
+}
+
+func (l *trackingListener) closeAll() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for c := range l.conns {
+		c.Close()
+		delete(l.conns, c)
+	}
+}
+
+type trackedConn struct {
+	net.Conn
+	l *trackingListener
+}
+
+func (c *trackedConn) Close() error {
+	c.l.mu.Lock()
+	delete(c.l.conns, c.Conn)
+	c.l.mu.Unlock()
+	return c.Conn.Close()
+}
 
 func (s *Server) stop() {
 	if s.srv != nil {
