@@ -201,7 +201,7 @@ if on client1 ip link show mokoup2p0 >/dev/null 2>&1; then
 else
 	pass "mokoup2p0 is gone after leaving"
 fi
-if on client1 pgrep -x easytier-core >/dev/null; then
+if on client1 pidof easytier-core >/dev/null; then
 	fail "easytier-core still runs after leaving"
 else
 	pass "no easytier-core runs after leaving"
@@ -220,7 +220,7 @@ wait_for 10 "non-root daemon" asuser mokoup2p status
 asuser mokoup2p server http://server:8080
 printf '%s\n' "$ADMIN_PASSWORD" | asuser mokoup2p login -u "$ADMIN_USERNAME"
 if asuser mokoup2p join "$code" && wait_for 30 "non-root device reaches client2" on client1 ping -c 1 -W 1 "$vip2"; then
-	core=$(on client1 sh -c 'p=$(pgrep -x easytier-core); echo "uid $(stat -c %u /proc/$p) $(grep CapEff /proc/$p/status | tr "\t" " ")"')
+	core=$(on client1 sh -c 'p=$(pidof easytier-core); echo "uid $(stat -c %u /proc/$p) $(grep CapEff /proc/$p/status | tr "\t" " ")"')
 	pass "non-root daemon joined (easytier-core: $core), ping $vip2 ok"
 else
 	fail "non-root daemon with CAP_NET_ADMIN could not join and ping"
