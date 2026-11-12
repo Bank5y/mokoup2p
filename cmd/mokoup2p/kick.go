@@ -13,6 +13,7 @@ var notices = map[ipc.Notice]string{
 	ipc.NoticeKicked:          "你已被房主移出房间",
 	ipc.NoticeRoomDeleted:     "房间已被删除",
 	ipc.NoticeAccountDisabled: "账号已被管理员禁用",
+	ipc.NoticeAccountDeleted:  "账号已被管理员删除",
 }
 
 // cmdKick kicks the member with the given virtual IP out of the current room.

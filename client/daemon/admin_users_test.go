@@ -104,12 +104,8 @@ func TestDisabledUsersDaemonEndsLoggedOut(t *testing.T) {
 		t.Fatalf("disable: %v", err)
 	}
 
-	if _, err := alice.IPC.SetDeviceName(ctx, "x"); err == nil {
-		t.Fatalf("disabled user's request should fail")
-	}
-	if st, _ := alice.IPC.Status(ctx); st.State != ipc.StateLoggedOut {
-		t.Fatalf("want logged out, got %+v", st)
-	}
+	// The account_disabled push logs the daemon out without any request.
+	waitFor(t, func() bool { st, _ := alice.IPC.Status(ctx); return st.State == ipc.StateLoggedOut })
 	_, err = alice.IPC.Login(ctx, "alice", "alice-password")
 	if code := servertest.ErrorCode(err); code != api.ErrAccountDisabled {
 		t.Fatalf("want %s, got %v", api.ErrAccountDisabled, err)

@@ -45,6 +45,7 @@ async function submit() {
         <span class="field-label">{{ t('login.password') }}</span>
         <input v-model="password" class="input" type="password" required autocomplete="current-password" />
       </label>
+      <p v-if="!error && status.notice" class="notice notice-error">{{ t(`notices.${status.notice}`) }}</p>
       <p v-if="error" class="notice notice-error">{{ error }}</p>
       <button class="button button-primary" type="submit" :disabled="busy">
         {{ busy ? t('login.submitting') : t('login.submit') }}

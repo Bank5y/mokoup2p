@@ -35,3 +35,8 @@ export async function copyText(text) {
   await navigator.clipboard.writeText(text)
 }
 export const kick = (memberId) => app().Kick(memberId)
+
+export const allRooms = () => app().AllRooms()
+export const adminDeleteRoom = (code) => app().AdminDeleteRoom(code)
+export const settings = () => app().Settings()
+export const setSettings = (roomsPerUser, roomCapacity) => app().SetSettings(roomsPerUser, roomCapacity)

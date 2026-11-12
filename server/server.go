@@ -84,6 +84,7 @@ func (s *Server) routes() {
 	s.relayRoutes()
 	s.realtimeRoutes()
 	s.kickRoutes()
+	s.adminRoomRoutes()
 }
 
 func openDB(path string) (*sql.DB, error) {

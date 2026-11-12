@@ -205,6 +205,10 @@ func (d *Daemon) handleEvent(m api.Message) {
 		d.leftByServer(m, ipc.NoticeKicked)
 	case api.EventRoomDeleted:
 		d.leftByServer(m, ipc.NoticeRoomDeleted)
+	case api.EventAccountDisabled:
+		d.loggedOutByServer(ipc.NoticeAccountDisabled)
+	case api.EventAccountDeleted:
+		d.loggedOutByServer(ipc.NoticeAccountDeleted)
 	case api.EventNetworkChanged:
 		var ev api.NetworkChanged
 		if err := json.Unmarshal(m.Data, &ev); err != nil {
@@ -235,6 +239,21 @@ func (d *Daemon) leftByServer(m api.Message, notice ipc.Notice) {
 	d.notice = notice
 	d.changed()
 	d.leaveRoomInBackground(false)
+}
+
+// loggedOutByServer handles an administrator disabling or deleting this
+// device's user: the session is already revoked, so the device leaves its
+// room locally and logs out, remembering why.
+func (d *Daemon) loggedOutByServer(notice ipc.Notice) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if !d.loggedIn {
+		return
+	}
+	d.notice = notice
+	if err := d.logOutLocally(); err != nil {
+		log.Printf("log out: %v", err)
+	}
 }
 
 // restartWithNetwork moves the engine to the room's new network key. The
