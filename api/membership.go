@@ -4,6 +4,10 @@ package api
 // caller escapes the code.
 func PathRoomMembers(code string) string { return PathRoom(code) + "/members" }
 
+// PathRoomMember is one member of a room, by its device id (api.Member.ID).
+// The room owner kicks it with DELETE.
+func PathRoomMember(code, memberID string) string { return PathRoomMembers(code) + "/" + memberID }
+
 // PathMembership is the calling device's current membership: GET returns
 // MyMembership, DELETE leaves the room the device is in.
 const PathMembership = "/api/v1/me/membership"
@@ -53,6 +57,9 @@ type NetworkConfig struct {
 // ErrNotRoomMember: only the room's members, its owner and administrators
 // may see who is in a room.
 const ErrNotRoomMember ErrorCode = "not_room_member"
+
+// ErrMemberNotFound: the device to kick is not a member of the room.
+const ErrMemberNotFound ErrorCode = "member_not_found"
 
 // Member is a device in a room, as the other members see it.
 type Member struct {

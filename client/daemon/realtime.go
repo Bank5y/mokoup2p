@@ -201,7 +201,70 @@ func (d *Daemon) handleEvent(m api.Message) {
 			d.changed() // front ends reload the member list
 		}
 		d.mu.Unlock()
+	case api.EventKicked:
+		d.leftByServer(m, ipc.NoticeKicked)
+	case api.EventRoomDeleted:
+		d.leftByServer(m, ipc.NoticeRoomDeleted)
+	case api.EventNetworkChanged:
+		var ev api.NetworkChanged
+		if err := json.Unmarshal(m.Data, &ev); err != nil {
+			log.Printf("realtime: bad %s event: %v", m.Type, err)
+			return
+		}
+		d.background.Add(1)
+		go func() {
+			defer d.background.Done()
+			d.restartWithNetwork(ev)
+		}()
 	}
+}
+
+// leftByServer handles the server ending this device's membership (kick,
+// room deleted): the device leaves locally and remembers why.
+func (d *Daemon) leftByServer(m api.Message, notice ipc.Notice) {
+	var ev api.RoomEvent
+	if err := json.Unmarshal(m.Data, &ev); err != nil {
+		log.Printf("realtime: bad %s event: %v", m.Type, err)
+		return
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.room == nil || d.room.Code != ev.Room {
+		return
+	}
+	d.notice = notice
+	d.changed()
+	d.leaveRoomInBackground(false)
+}
+
+// restartWithNetwork moves the engine to the room's new network key. The
+// membership stays; peers reconnect briefly. If the engine cannot restart,
+// the device leaves the room.
+func (d *Daemon) restartWithNetwork(ev api.NetworkChanged) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	d.roomMu.Lock()
+	defer d.roomMu.Unlock()
+	d.mu.Lock()
+	inRoom := d.room != nil && d.room.Code == ev.Room
+	hostname := d.saved.DeviceName
+	d.mu.Unlock()
+	if !inRoom {
+		return
+	}
+	cfg, err := engineConfig(ev.Network, hostname)
+	if err == nil {
+		err = d.cfg.Engine.Restart(ctx, cfg)
+	}
+	if err != nil {
+		log.Printf("engine restart with new network key: %v", err)
+		d.leaveRoomLocked(ctx, true)
+		return
+	}
+	d.mu.Lock()
+	d.network = ev.Network
+	d.changed()
+	d.mu.Unlock()
 }
 
 // checkMembership leaves the room locally if the server no longer counts

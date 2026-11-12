@@ -159,14 +159,8 @@ func (s *Server) join(code string, se session, password string) (api.JoinResult,
 		s.announceJoin(se.devicePK, room)
 	}
 	return api.JoinResult{
-		Room: room.api(),
-		Network: api.NetworkConfig{
-			NetworkName: networkName(room),
-			NetworkKey:  key,
-			VirtualIP:   ip.String(),
-			Subnet:      room.subnet,
-			RelayPeers:  append([]string{}, s.relayPeers...),
-		},
+		Room:    room.api(),
+		Network: s.networkConfig(room, key, ip.String()),
 	}, nil
 }
 

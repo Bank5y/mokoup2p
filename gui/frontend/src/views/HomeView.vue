@@ -58,11 +58,12 @@ function changed(st) {
     <SettingsView v-else-if="page === 'settings'" :status="status" @status="emit('status', $event)" />
     <AdminView v-else-if="page === 'admin' && status.isAdmin" :status="status" @status-lost="emit('refresh')" />
     <RoomView v-else-if="status.room" :room="status.room" :connected="status.connected"
-              :revision="status.revision" @left="changed" />
+              :revision="status.revision" :is-owner="status.room.owner === status.username" @left="changed" />
     <div v-else-if="status.state === 'joining'" class="panel">
       <p class="notice">{{ t('currentRoom.joining') }}</p>
     </div>
     <div v-else class="panel home-actions">
+      <p v-if="status.notice" class="notice notice-error">{{ t(`notices.${status.notice}`) }}</p>
       <button class="button button-primary" type="button" @click="page = 'joinRoom'">{{ t('home.joinRoom') }}</button>
       <button class="button" type="button" @click="startCreate">{{ t('home.createRoom') }}</button>
     </div>

@@ -45,7 +45,26 @@ const (
 	EventMemberJoined MessageType = "member_joined"
 	// EventMemberLeft (MemberLeft) goes to the room's remaining members.
 	EventMemberLeft MessageType = "member_left"
+	// EventKicked (RoomEvent) goes to a device its room owner kicked out.
+	EventKicked MessageType = "kicked"
+	// EventRoomDeleted (RoomEvent) goes to every member of a deleted room.
+	EventRoomDeleted MessageType = "room_deleted"
+	// EventNetworkChanged (NetworkChanged) goes to every member when the
+	// room's network key was replaced; members restart their engine with it.
+	EventNetworkChanged MessageType = "network_changed"
 )
+
+// RoomEvent concerns the receiving device's membership of Room.
+type RoomEvent struct {
+	Room string `json:"room"`
+}
+
+// NetworkChanged carries the receiving device's new network configuration
+// for Room. Only the network key changes; the virtual IP stays.
+type NetworkChanged struct {
+	Room    string        `json:"room"`
+	Network NetworkConfig `json:"network"`
+}
 
 // MemberJoined: a device has become a member of Room.
 type MemberJoined struct {
@@ -61,6 +80,7 @@ const (
 	LeftByDevice     LeaveReason = "left"              // the device left
 	LeftByTimeout    LeaveReason = "heartbeat_timeout" // no heartbeat for HeartbeatTimeout
 	LeftWhenDisabled LeaveReason = "account_disabled"  // its user was disabled
+	LeftByKick       LeaveReason = "kicked"            // the room owner kicked it
 )
 
 // MemberLeft: a device is no longer a member of Room.

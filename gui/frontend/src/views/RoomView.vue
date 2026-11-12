@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue'
-import { leave, members as listMembers } from '../backend.js'
+import { kick, leave, members as listMembers } from '../backend.js'
 import { t, errorText } from '../i18n/index.js'
 import RoomCode from '../components/RoomCode.vue'
 
@@ -10,6 +10,8 @@ const props = defineProps({
   room: { type: Object, required: true },
   connected: { type: Boolean, default: true },
   revision: { type: Number, default: 0 },
+  // isOwner: this device's user owns the room and may kick members.
+  isOwner: { type: Boolean, default: false },
 })
 const emit = defineEmits(['left'])
 
@@ -29,6 +31,17 @@ async function loadMembers() {
 
 onMounted(loadMembers)
 watch(() => props.revision, loadMembers)
+
+async function kickMember(m) {
+  if (!window.confirm(t('currentRoom.kickConfirm', { member: `${m.username} / ${m.deviceName}` }))) return
+  error.value = ''
+  try {
+    await kick(m.id)
+    await loadMembers()
+  } catch (err) {
+    error.value = errorText(err)
+  }
+}
 
 async function leaveRoom() {
   busy.value = true
@@ -64,6 +77,7 @@ async function leaveRoom() {
         <tr>
           <th>{{ t('currentRoom.colMember') }}</th>
           <th>{{ t('currentRoom.colVirtualIp') }}</th>
+          <th v-if="isOwner"></th>
         </tr>
       </thead>
       <tbody>
@@ -73,6 +87,11 @@ async function leaveRoom() {
             <span v-if="m.self" class="member-self">{{ t('currentRoom.self') }}</span>
           </td>
           <td class="room-facts-ip">{{ m.virtualIp }}</td>
+          <td v-if="isOwner" class="table-actions">
+            <button v-if="!m.self" class="button button-small" type="button" @click="kickMember(m)">
+              {{ t('currentRoom.kick') }}
+            </button>
+          </td>
         </tr>
       </tbody>
     </table>

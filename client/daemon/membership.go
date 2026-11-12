@@ -22,6 +22,7 @@ import (
 func (d *Daemon) membershipRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST "+ipc.PathJoin, d.handleJoin)
 	mux.HandleFunc("POST "+ipc.PathLeave, d.handleLeave)
+	mux.HandleFunc("POST "+ipc.PathKick, d.handleKick)
 }
 
 var errInRoom = &api.Error{Code: ipc.ErrInRoom, Message: "this device is in a room; leave it first"}
@@ -54,6 +55,7 @@ func (d *Daemon) join(ctx context.Context, req ipc.JoinRequest) error {
 		return errInRoom
 	}
 	d.joining = true
+	d.notice = ""
 	d.changed()
 	hostname := d.saved.DeviceName
 	d.mu.Unlock()

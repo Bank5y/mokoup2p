@@ -47,6 +47,8 @@ type Status struct {
 	DeviceName string `json:"deviceName"`
 	// Room is set in StateInRoom.
 	Room *CurrentRoom `json:"room,omitempty"`
+	// Notice, when set, says why the device last left a room on its own.
+	Notice Notice `json:"notice,omitempty"`
 	// Connected reports whether the realtime connection to the server is
 	// up. While it is down the daemon keeps reconnecting; a room survives
 	// if it comes back within api.HeartbeatTimeout.
