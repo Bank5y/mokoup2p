@@ -11,6 +11,7 @@ const (
 	PathJoin    = "/v1/join"
 	PathLeave   = "/v1/leave"
 	PathMembers = "/v1/members"
+	PathKick    = "/v1/kick"
 )
 
 // States of the room lifecycle, after StateIdle.
@@ -30,6 +31,21 @@ const (
 	// ErrNotInRoom: the request needs the device to be in a room.
 	ErrNotInRoom api.ErrorCode = "not_in_room"
 )
+
+// Notice tells the user why the device left its room without asking to.
+// It is shown until the next join or login.
+type Notice string
+
+const (
+	NoticeKicked          Notice = "kicked"           // the room owner kicked this device
+	NoticeRoomDeleted     Notice = "room_deleted"     // the room was deleted
+	NoticeAccountDisabled Notice = "account_disabled" // an administrator disabled the account
+)
+
+// KickRequest asks the room owner's daemon to kick a member (Member.ID).
+type KickRequest struct {
+	MemberID int64 `json:"memberId"`
+}
 
 type JoinRequest struct {
 	Code     string `json:"code"`
@@ -51,6 +67,11 @@ func (c *Client) Join(ctx context.Context, code, password string) (Status, error
 	var st Status
 	err := c.do(ctx, http.MethodPost, PathJoin, JoinRequest{Code: code, Password: password}, &st)
 	return st, err
+}
+
+// Kick removes a member from the current room; only its owner may do so.
+func (c *Client) Kick(ctx context.Context, memberID int64) error {
+	return c.do(ctx, http.MethodPost, PathKick, KickRequest{MemberID: memberID}, nil)
 }
 
 // Leave leaves the current room; it succeeds when not in a room as well.

@@ -21,6 +21,13 @@ func (a *App) Leave() (ipc.Status, error) {
 	return st, codeError(err)
 }
 
+// Kick removes a member (ipc.Member.ID) from the current room; owner only.
+func (a *App) Kick(memberID int64) error {
+	ctx, cancel := a.timeout()
+	defer cancel()
+	return codeError(a.ipc.Kick(ctx, memberID))
+}
+
 // Members lists the devices in the current room.
 func (a *App) Members() ([]ipc.Member, error) {
 	ctx, cancel := a.timeout()

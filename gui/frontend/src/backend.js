@@ -34,3 +34,4 @@ export async function copyText(text) {
   if (window.runtime?.ClipboardSetText && (await window.runtime.ClipboardSetText(text))) return
   await navigator.clipboard.writeText(text)
 }
+export const kick = (memberId) => app().Kick(memberId)

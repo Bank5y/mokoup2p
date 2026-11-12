@@ -96,6 +96,7 @@ func (s *Server) updateRoom(code string, se session, req api.UpdateRoomRequest) 
 		if _, err := s.db.Exec(`UPDATE rooms SET password_hash = ?, network_key = ? WHERE id = ?`, room.passwordHash, key, room.id); err != nil {
 			return roomRow{}, err
 		}
+		s.pushNetworkChanged(room, key)
 	}
 	return room, nil
 }
@@ -106,7 +107,7 @@ func (s *Server) handleDeleteRoom(w http.ResponseWriter, r *http.Request, se ses
 		writeError(w, err)
 		return
 	}
-	if _, err := s.db.Exec(`DELETE FROM rooms WHERE id = ?`, room.id); err != nil {
+	if err := s.deleteRoom(room); err != nil {
 		writeError(w, err)
 		return
 	}

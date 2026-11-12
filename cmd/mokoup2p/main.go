@@ -31,6 +31,7 @@ const usage = `用法：mokoup2p <命令> [参数]
   join [-p] 房间号       加入房间（需要时从终端读取房间密码；-p：直接输入）
   leave                  退出当前房间
   members [-w]           列出当前房间的成员（-w：持续显示并实时刷新）
+  kick 虚拟IP            把成员移出当前房间（仅房主）
 `
 
 func main() {
@@ -64,6 +65,8 @@ func main() {
 		err = cmdLeave(ctx, client)
 	case "members":
 		err = cmdMembers(ctx, client, os.Args[2:])
+	case "kick":
+		err = cmdKick(ctx, client, os.Args[2:])
 	case "-h", "--help", "help":
 		fmt.Print(usage)
 	default:
@@ -209,6 +212,9 @@ func cmdStatus(ctx context.Context, c *ipc.Client) error {
 	}
 	fmt.Println("服务端：" + server)
 	fmt.Printf("设备：%s（%s）\n", st.DeviceName, st.DeviceID)
+	if text, ok := notices[st.Notice]; ok {
+		fmt.Println("提示：" + text)
+	}
 	switch st.State {
 	case ipc.StateIdle:
 		role := ""
@@ -253,6 +259,7 @@ var messages = map[api.ErrorCode]string{
 	ipc.ErrEngineFailed:        "网络组件启动失败，已退出房间",
 	ipc.ErrNotInRoom:           "当前未在房间中",
 	api.ErrNotRoomMember:       "只有房间成员、房主和管理员可以查看成员",
+	api.ErrMemberNotFound:      "该设备不在这个房间中",
 }
 
 // inputError is a mistake in what the user typed, reported as is.

@@ -88,7 +88,8 @@
     "in_room": "本设备已在房间中，请先退出当前房间",
     "engine_failed": "网络组件启动失败，已退出房间",
     "internal": "发生内部错误",
-    "unknown": "发生未知错误"
+    "unknown": "发生未知错误",
+    "member_not_found": "该设备不在这个房间中"
   },
   "settings": {
     "deviceTitle": "设备名",
@@ -158,10 +159,17 @@
     "membersTitle": "成员（{count}）",
     "colMember": "用户名 / 设备名",
     "colVirtualIp": "虚拟 IP",
-    "self": "本机"
+    "self": "本机",
+    "kick": "移出",
+    "kickConfirm": "确定把 {member} 移出房间吗？"
   },
   "tray": {
     "show": "显示主窗口",
     "quit": "退出"
+  },
+  "notices": {
+    "kicked": "你已被房主移出房间",
+    "room_deleted": "房间已被删除",
+    "account_disabled": "账号已被管理员禁用"
   }
 }

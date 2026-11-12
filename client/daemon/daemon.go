@@ -59,6 +59,7 @@ type Daemon struct {
 	joining bool
 	room    *ipc.CurrentRoom  // the room this device is in, nil when not in one
 	network api.NetworkConfig // the network configuration of room
+	notice  ipc.Notice        // why the device last left a room on its own
 
 	// serverDeviceName is the device name the server last reported.
 	serverDeviceName string
@@ -250,6 +251,7 @@ func (d *Daemon) status() ipc.Status {
 		}
 		st.Connected = d.connected
 	}
+	st.Notice = d.notice
 	st.Revision = d.revision
 	return st
 }
@@ -336,6 +338,9 @@ func (d *Daemon) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	err = d.acceptSession(sess)
+	if err == nil {
+		d.notice = "" // the user is starting afresh
+	}
 	d.mu.Unlock()
 	if err != nil {
 		writeError(w, err)
