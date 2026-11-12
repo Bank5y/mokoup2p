@@ -66,11 +66,29 @@ bin/mokoup2p device-name 客厅电脑     # 修改设备名
 bin/mokoup2p room create 开黑            # 加 -p 可设置房间密码
 bin/mokoup2p room list
 bin/mokoup2p join K7QH-3MXP            # 房间有密码时会提示输入
+bin/mokoup2p members                  # 成员、直连 / 中转与延迟（-w 持续刷新）
+bin/mokoup2p kick 10.208.3.2           # 房主把成员移出房间
 bin/mokoup2p leave
 bin/mokoup2p logout
 ```
 
-用户由管理员在 GUI 的"用户管理"页新增、重置密码、禁用、删除或设为管理员。
+用户、所有房间和系统设置（每用户房间数上限、房间容量）由管理员在 GUI 的"管理"页维护。
+
+## 客户端（Windows x64）
+
+后台服务 `mokoup2pd.exe` 作为 Windows 服务（LocalSystem）运行，状态保存在 `%ProgramData%\mokoup2p`，日志为其中的 `mokoup2pd.log`。GUI 和 CLI 以普通用户运行，通过命名管道 `\\.\pipe\mokoup2p` 与它通信；管道只允许 SYSTEM 和安装时指定的用户访问。
+
+从 EasyTier v2.6.4 发布页下载 `easytier-windows-x86_64-v2.6.4.zip`（sha256 `27af91e270e554709b048bd32327fefd2dfce5062ae1e8701af7550c6f525f84`），把 `easytier-core.exe`、`easytier-cli.exe`、`wintun.dll`、`Packet.dll`、`WinDivert64.sys` 放在 `mokoup2pd.exe` 旁边。`Packet.dll` 来自 Npcap，其许可不允许未经许可再分发，因此本项目不打包它（见 `docs/windows.md`）。
+
+```powershell
+# 交叉编译（在 Linux 上也可以）
+$env:GOOS="windows"; go build -o bin/ ./cmd/mokoup2pd ./cmd/mokoup2p
+# 以管理员身份：注册并启动服务，允许当前用户使用（或 -user 其他用户名）
+bin\mokoup2pd.exe install
+bin\mokoup2pd.exe uninstall          # 停止（会离开房间）并删除服务
+```
+
+GUI 在 Windows 上不需要 cgo：`cd gui; $env:GOOS="windows"; go build -tags desktop,production -ldflags "-H windowsgui" -o ..\bin\mokoup2p-gui.exe .`（需先构建前端）。手动验证步骤见 `docs/windows.md`。
 
 ## GUI
 
