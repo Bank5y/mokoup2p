@@ -91,7 +91,21 @@ type Member struct {
 	VirtualIP  string `json:"virtualIp"`
 	// Self marks this device.
 	Self bool `json:"self,omitempty"`
+	// Path is how traffic reaches the member: PathDirect or PathRelay, or
+	// empty while the network engine does not see it (yet), and for Self.
+	Path Path `json:"path,omitempty"`
+	// LatencyMs is the measured round-trip time in milliseconds; 0 when
+	// unknown.
+	LatencyMs float64 `json:"latencyMs,omitempty"`
 }
+
+// Path is how traffic reaches a member.
+type Path string
+
+const (
+	PathDirect Path = "direct" // hole-punched, not through the server
+	PathRelay  Path = "relay"  // through the relay node
+)
 
 type MemberList struct {
 	Members []Member `json:"members"`

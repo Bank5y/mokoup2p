@@ -166,7 +166,15 @@
     "colVirtualIp": "虚拟 IP",
     "self": "本机",
     "kick": "移出",
-    "kickConfirm": "确定把 {member} 移出房间吗？"
+    "kickConfirm": "确定把 {member} 移出房间吗？",
+    "colPath": "连接",
+    "colLatency": "延迟",
+    "path": {
+      "direct": "直连",
+      "relay": "中转",
+      "unknown": "连接中"
+    },
+    "latency": "{ms} ms"
   },
   "tray": {
     "show": "显示主窗口",
