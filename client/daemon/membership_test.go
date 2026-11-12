@@ -1,6 +1,7 @@
 package daemon_test
 
 import (
+	"fmt"
 	"net/http"
 	"net/netip"
 	"slices"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/Bank5y/mokoup2p/api"
 	"github.com/Bank5y/mokoup2p/client/daemontest"
+	"github.com/Bank5y/mokoup2p/client/engine"
 	"github.com/Bank5y/mokoup2p/client/ipc"
 	"github.com/Bank5y/mokoup2p/server/servertest"
 )
@@ -223,6 +225,21 @@ func TestEngineStartFailureLeavesTheRoomAgain(t *testing.T) {
 		t.Fatal("engine running after failed start")
 	}
 	assertDeviceInNoRoom(t, s, d, other)
+}
+
+func TestEngineMissingADependencyIsReportedAsSuch(t *testing.T) {
+	s, d := loggedInPair(t)
+	room := ownerCreatesRoom(t, s, "lan party", "")
+	d.Engine.FailNextStartWith(fmt.Errorf("Packet.dll: %w", engine.ErrDependencyMissing))
+
+	_, err := d.IPC.Join(ctx, room.Code, "")
+
+	if code := servertest.ErrorCode(err); code != ipc.ErrEngineDependencyMissing {
+		t.Fatalf("want %s, got %v", ipc.ErrEngineDependencyMissing, err)
+	}
+	if st := mustStatus(t, d); st.State != ipc.StateIdle {
+		t.Fatalf("want idle, got %+v", st)
+	}
 }
 
 func TestChangingServerWhileInARoomIsRefused(t *testing.T) {

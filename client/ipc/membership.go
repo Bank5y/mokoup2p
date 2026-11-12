@@ -28,6 +28,9 @@ const (
 	// ErrEngineFailed: the server admitted the device but the network
 	// engine could not start; the device has left the room again.
 	ErrEngineFailed api.ErrorCode = "engine_failed"
+	// ErrEngineDependencyMissing: like ErrEngineFailed, because something
+	// the engine needs is not installed (on Windows: Npcap).
+	ErrEngineDependencyMissing api.ErrorCode = "engine_dependency_missing"
 	// ErrNotInRoom: the request needs the device to be in a room.
 	ErrNotInRoom api.ErrorCode = "not_in_room"
 )

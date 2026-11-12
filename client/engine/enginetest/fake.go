@@ -24,7 +24,7 @@ type Fake struct {
 	restarts     []engine.Config
 	stops        int
 	peers        []engine.Peer
-	failStart    bool
+	failStart    error
 	hold         chan struct{}
 }
 
@@ -49,9 +49,9 @@ func (f *Fake) Start(ctx context.Context, cfg engine.Config) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.starts = append(f.starts, cfg)
-	if f.failStart {
-		f.failStart = false
-		return ErrStartFailed
+	if err := f.failStart; err != nil {
+		f.failStart = nil
+		return err
 	}
 	if f.running {
 		return errors.New("fake engine: Start while running")
@@ -131,10 +131,13 @@ func (f *Fake) SetPeers(peers []engine.Peer) {
 }
 
 // FailNextStart makes the next Start return ErrStartFailed.
-func (f *Fake) FailNextStart() {
+func (f *Fake) FailNextStart() { f.FailNextStartWith(ErrStartFailed) }
+
+// FailNextStartWith makes the next Start return err.
+func (f *Fake) FailNextStartWith(err error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.failStart = true
+	f.failStart = err
 }
 
 // HoldStart makes Start wait until the returned release function is called,

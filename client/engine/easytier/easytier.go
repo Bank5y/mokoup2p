@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -46,7 +47,20 @@ type Options struct {
 	// 255.255.255.255 also enter the room, so LAN games find each other.
 	// Windows only; see docs/adr/0003-windows-broadcast.md.
 	UDPBroadcastRelay bool
+	// RequiredLibraries are files easytier-core cannot start without (on
+	// Windows v2.6.4: Npcap's Packet.dll, which we may not redistribute; see
+	// docs/adr/0004-npcap-dependency.md). Start looks for each next to the
+	// core and in DLLSearchDirs and fails with ErrLibraryMissing if one is
+	// absent, instead of a cryptic loader error.
+	RequiredLibraries []string
+	// DLLSearchDirs are prepended to the core's PATH, where Windows also
+	// looks for DLLs (e.g. %SystemRoot%\System32\Npcap).
+	DLLSearchDirs []string
 }
+
+// ErrLibraryMissing: a RequiredLibraries file was not found. It wraps
+// engine.ErrDependencyMissing.
+var ErrLibraryMissing = fmt.Errorf("easytier: required library: %w", engine.ErrDependencyMissing)
 
 func (o Options) withDefaults() Options {
 	if o.CorePath == "" {
@@ -117,10 +131,13 @@ func (e *Engine) Start(ctx context.Context, cfg engine.Config) error {
 }
 
 func (e *Engine) startLocked(ctx context.Context, cfg engine.Config) error {
+	if err := e.checkLibraries(); err != nil {
+		return err
+	}
 	proc, err := etproc.Start(etproc.Spec{
 		Path:    e.opts.CorePath,
 		Args:    e.args(cfg),
-		Env:     []string{"ET_NETWORK_SECRET=" + cfg.NetworkSecret},
+		Env:     e.env(cfg),
 		Name:    "easytier-core",
 		OnStart: e.writePIDFile,
 	})
@@ -250,4 +267,34 @@ func (e *Engine) removePIDFile() {
 	if e.opts.PIDFile != "" {
 		_ = os.Remove(e.opts.PIDFile)
 	}
+}
+
+// env is what the core gets on top of the daemon's environment. The secret
+// goes here rather than on the command line, where other local users could
+// read it.
+func (e *Engine) env(cfg engine.Config) []string {
+	env := []string{"ET_NETWORK_SECRET=" + cfg.NetworkSecret}
+	if len(e.opts.DLLSearchDirs) > 0 {
+		dirs := append(append([]string{}, e.opts.DLLSearchDirs...), os.Getenv("PATH"))
+		env = append(env, "PATH="+strings.Join(dirs, string(os.PathListSeparator)))
+	}
+	return env
+}
+
+// checkLibraries makes sure every required library can be found.
+func (e *Engine) checkLibraries() error {
+	dirs := append([]string{filepath.Dir(e.opts.CorePath)}, e.opts.DLLSearchDirs...)
+	for _, lib := range e.opts.RequiredLibraries {
+		found := false
+		for _, dir := range dirs {
+			if _, err := os.Stat(filepath.Join(dir, lib)); err == nil {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("%w: %s (looked in %s)", ErrLibraryMissing, lib, strings.Join(dirs, ", "))
+		}
+	}
+	return nil
 }

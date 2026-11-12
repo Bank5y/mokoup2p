@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/Bank5y/mokoup2p/client/daemon"
+	"github.com/Bank5y/mokoup2p/client/engine/easytier"
 	"github.com/Bank5y/mokoup2p/client/ipc"
 )
 
@@ -35,3 +36,6 @@ func main() {
 		log.Fatal(err)
 	}
 }
+
+// platformEngineOptions: nothing extra on Linux.
+func platformEngineOptions(*easytier.Options) {}

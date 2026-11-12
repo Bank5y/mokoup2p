@@ -1,0 +1,7 @@
+# Builds the Linux GUI (Wails needs cgo, GTK3 and WebKit2GTK 4.1):
+#   docker build -t mokoup2p-gui-builder -f packaging/linux/Dockerfile.gui packaging/linux
+FROM golang:1.27-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      gcc libc6-dev pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /src/gui
