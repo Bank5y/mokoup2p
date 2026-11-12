@@ -41,6 +41,11 @@ type Options struct {
 	// StartTimeout bounds how long Start waits for the core to answer on
 	// its RPC portal (default 20s).
 	StartTimeout time.Duration
+	// UDPBroadcastRelay turns on EasyTier's Windows broadcast fix
+	// (--enable-udp-broadcast-relay): local UDP broadcasts to
+	// 255.255.255.255 also enter the room, so LAN games find each other.
+	// Windows only; see docs/adr/0003-windows-broadcast.md.
+	UDPBroadcastRelay bool
 }
 
 func (o Options) withDefaults() Options {
@@ -77,7 +82,7 @@ var _ engine.Engine = (*Engine)(nil)
 
 func New(opts Options) *Engine { return &Engine{opts: opts.withDefaults()} }
 
-// Args is the easytier-core command line for cfg, without the network
+// args is the easytier-core command line for cfg, without the network
 // secret (passed in the environment so other local users cannot read it).
 func (e *Engine) args(cfg engine.Config) []string {
 	o := e.opts
@@ -95,6 +100,9 @@ func (e *Engine) args(cfg engine.Config) []string {
 	}
 	for _, p := range cfg.RelayPeers {
 		args = append(args, "--peers", p)
+	}
+	if o.UDPBroadcastRelay {
+		args = append(args, "--enable-udp-broadcast-relay", "true")
 	}
 	return args
 }

@@ -32,3 +32,15 @@ EasyTier 的 Windows 压缩包包含：
 4. 在任务管理器里结束 `mokoup2pd.exe`：`easytier-core.exe` 随之消失，网络适配器列表中没有残留的 `mokoup2p0`；服务自动重启后不会自动回到房间。
 5. 运行 GUI：登录、加入房间、成员列表、点 × 隐藏到托盘仍在房间中、托盘"退出"离开房间。
 6. `mokoup2pd.exe uninstall`：服务删除，虚拟网卡消失。
+
+## 广播修复（#13 验收）
+
+后台服务在 Windows 上给 `easytier-core.exe` 加上 `--enable-udp-broadcast-relay true`（见 ADR-0003），需要 `WinDivert64.sys` 与 `easytier-core.exe` 放在一起。
+
+1. Windows 设备 A 和 Linux 或 Windows 设备 B 进入同一房间。
+2. 在 B 上监听 UDP 端口并打印来源地址，例如 Linux：`socat -u UDP4-RECVFROM:9999,reuseaddr,fork SYSTEM:'echo $SOCAT_PEERADDR'`。
+3. 在 A 上从 `0.0.0.0` 向 `255.255.255.255:9999` 发送广播（例如 PowerShell：`$u=New-Object Net.Sockets.UdpClient; $u.EnableBroadcast=$true; $b=[Text.Encoding]::ASCII.GetBytes('hi'); $u.Send($b,$b.Length,'255.255.255.255',9999)`）。
+   B 应收到来源为 **A 的虚拟 IP** 的包（v2.6.4 下每个包会到两次，属已知问题）。
+4. 同一时间物理局域网上的其他机器也应照常收到这个广播（修复不拦截原始包）。
+5. A 离开房间后再发：B 不再收到。
+6. 用至少一款依赖 UDP 受限广播发现房间的局域网游戏（或上面的测试工具）在 A 与 B 之间互相发现。
