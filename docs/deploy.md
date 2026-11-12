@@ -131,7 +131,13 @@ docker compose -f deploy/docker-compose.yml up -d --build
 
 Linux 上若安装时没有自动启用服务，手动执行 `sudo systemctl enable --now mokoup2pd@$(id -u)`。arm64 包只含后台服务和 CLI（GUI 需要 cgo，目前只构建 amd64）。
 
-## 7. 第三方软件与许可（EasyTier，LGPL-3.0）
+## 7. 已知限制
+
+- **同机其他用户可读取网络密钥**：`easytier-core` 的本地 RPC 端口（`127.0.0.1:15888`）只按来源 IP 限制，EasyTier v2.6.4 没有 RPC 鉴权。同一台电脑上的其他本地用户能连上它，读到当前房间的网络密钥。在多人共用的机器上请注意；房主修改房间密码会更换密钥。
+- **登录没有限速**：服务端不限制错误密码的尝试次数。公网部署请使用强密码，必要时在反向代理上限流（例如 Caddy 的 rate_limit 插件）。
+- **管理员重置密码不会让已登录的设备下线**：如需立即踢下线，请先禁用再启用该用户。
+
+## 8. 第三方软件与许可（EasyTier，LGPL-3.0）
 
 客户端以独立子进程运行**未修改的** EasyTier v2.6.4 官方发布二进制（`easytier-core`、`easytier-cli`），只通过命令行、环境变量和本地 RPC 与之交互，不链接、不修改 EasyTier。按 LGPL-3.0：
 
