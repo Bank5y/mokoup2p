@@ -90,6 +90,7 @@
     "internal": "发生内部错误",
     "unknown": "发生未知错误",
     "member_not_found": "该设备不在这个房间中",
+    "update_check_failed": "检查更新失败，请检查网络能否访问 GitHub",
     "engine_dependency_missing": "缺少网络组件依赖，已退出房间。Windows 上请先安装 Npcap（https://npcap.com），安装时勾选默认选项即可。"
   },
   "settings": {
@@ -109,7 +110,22 @@
     "accountTitle": "账号",
     "loggedInAs": "当前账号：{username}",
     "logout": "退出登录",
-    "saving": "正在保存…"
+    "saving": "正在保存…",
+    "aboutTitle": "关于",
+    "version": "当前版本：{version}",
+    "autoCheck": "启动时自动检查更新",
+    "checkNow": "立即检查",
+    "checking": "正在检查…",
+    "upToDate": "已是最新版本",
+    "newVersion": "发现新版本 {version}，见页面顶部",
+    "newVersionIgnored": "发现新版本 {version}（已设为忽略）",
+    "unignore": "不再忽略"
+  },
+  "update": {
+    "available": "发现新版本 {version}",
+    "notes": "发布说明",
+    "update": "更新",
+    "ignore": "忽略此版本"
   },
   "admin": {
     "title": "用户管理",

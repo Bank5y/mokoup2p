@@ -4,6 +4,8 @@ import { status, waitStatus } from './backend.js'
 import { t, errorText } from './i18n/index.js'
 import LoginView from './views/LoginView.vue'
 import HomeView from './views/HomeView.vue'
+import UpdateBanner from './components/UpdateBanner.vue'
+import { checkAtStartup } from './update.js'
 
 // current is the daemon status; null until the first answer arrives.
 const current = ref(null)
@@ -42,6 +44,7 @@ async function follow() {
 onMounted(async () => {
   await refresh()
   follow()
+  checkAtStartup()
 })
 onUnmounted(() => {
   following = false
@@ -50,6 +53,7 @@ onUnmounted(() => {
 
 <template>
   <main class="app">
+    <UpdateBanner />
     <div v-if="error" class="app-error">
       <p class="notice notice-error">{{ error }}</p>
       <button class="button" type="button" @click="refresh">{{ t('common.retry') }}</button>

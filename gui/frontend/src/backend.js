@@ -40,3 +40,8 @@ export const allRooms = () => app().AllRooms()
 export const adminDeleteRoom = (code) => app().AdminDeleteRoom(code)
 export const settings = () => app().Settings()
 export const setSettings = (roomsPerUser, roomCapacity) => app().SetSettings(roomsPerUser, roomCapacity)
+
+export const checkUpdate = () => app().CheckUpdate()
+export const updateSettings = () => app().UpdateSettings()
+export const setUpdateSettings = (autoCheck, ignoredVersion) => app().SetUpdateSettings(autoCheck, ignoredVersion)
+export const openURL = (url) => app().OpenURL(url)

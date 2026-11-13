@@ -1,7 +1,8 @@
 <script setup>
-import { ref } from 'vue'
-import { changePassword, logout, setDeviceName } from '../backend.js'
+import { onMounted, ref } from 'vue'
+import { changePassword, logout, setDeviceName, setUpdateSettings, updateSettings } from '../backend.js'
 import { t, errorText } from '../i18n/index.js'
+import { checkNow } from '../update.js'
 
 const props = defineProps({ status: { type: Object, required: true } })
 // status: the daemon status changed (renamed, logged out, session lost).
@@ -21,6 +22,64 @@ const passwordError = ref('')
 
 const logoutBusy = ref(false)
 const logoutError = ref('')
+
+// About: version and update checks.
+const autoCheck = ref(true)
+const ignoredVersion = ref('')
+const checkBusy = ref(false)
+const checkMessage = ref('')
+const checkError = ref('')
+const checked = ref(null)
+
+onMounted(async () => {
+  try {
+    const s = await updateSettings()
+    autoCheck.value = s.autoCheck
+    ignoredVersion.value = s.ignoredVersion ?? ''
+  } catch (err) {
+    checkError.value = errorText(err)
+  }
+})
+
+async function saveAutoCheck() {
+  checkError.value = ''
+  try {
+    const s = await setUpdateSettings(autoCheck.value, ignoredVersion.value)
+    autoCheck.value = s.autoCheck
+  } catch (err) {
+    autoCheck.value = !autoCheck.value
+    checkError.value = errorText(err)
+  }
+}
+
+async function runCheck() {
+  checkBusy.value = true
+  checkMessage.value = ''
+  checkError.value = ''
+  checked.value = null
+  try {
+    const info = await checkNow()
+    checked.value = info
+    if (!info.available) checkMessage.value = t('settings.upToDate')
+    else if (info.ignored) checkMessage.value = t('settings.newVersionIgnored', { version: info.latestVersion })
+    else checkMessage.value = t('settings.newVersion', { version: info.latestVersion })
+  } catch (err) {
+    checkError.value = errorText(err)
+  } finally {
+    checkBusy.value = false
+  }
+}
+
+async function unignore() {
+  checkError.value = ''
+  try {
+    await setUpdateSettings(autoCheck.value, '')
+    ignoredVersion.value = ''
+    await runCheck()
+  } catch (err) {
+    checkError.value = errorText(err)
+  }
+}
 
 async function saveDeviceName() {
   deviceBusy.value = true
@@ -111,6 +170,25 @@ async function submitLogout() {
         </button>
       </div>
     </form>
+
+    <h2 class="section-title">{{ t('settings.aboutTitle') }}</h2>
+    <div class="form">
+      <p class="field-label">{{ t('settings.version', { version: status.version }) }}</p>
+      <label class="checkbox">
+        <input v-model="autoCheck" type="checkbox" @change="saveAutoCheck" />
+        <span>{{ t('settings.autoCheck') }}</span>
+      </label>
+      <p v-if="checkError" class="notice notice-error">{{ checkError }}</p>
+      <p v-if="checkMessage" class="notice notice-ok">{{ checkMessage }}</p>
+      <div class="button-row">
+        <button class="button" type="button" :disabled="checkBusy" @click="runCheck">
+          {{ checkBusy ? t('settings.checking') : t('settings.checkNow') }}
+        </button>
+        <button v-if="checked?.available && checked?.ignored" class="button" type="button" @click="unignore">
+          {{ t('settings.unignore') }}
+        </button>
+      </div>
+    </div>
 
     <h2 class="section-title">{{ t('settings.accountTitle') }}</h2>
     <div class="form">
