@@ -20,7 +20,8 @@ import (
 const usage = `用法：mokoup2p <命令> [参数]
 
 命令：
-  server [地址]          查看或设置服务端地址，例如 https://p2p.example.com
+  server [地址]          查看或设置服务端地址，例如 1.2.3.4:8080 或 https://p2p.example.com
+                         （不写协议时按 http，不写端口时按 8080）
   login [-u 用户名]      登录（密码从终端读取）
   status                 查看登录状态
   passwd                 修改密码（旧密码和新密码从终端读取）

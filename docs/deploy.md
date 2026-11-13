@@ -38,6 +38,8 @@ docker compose -f deploy/docker-compose.yml up -d --build
 | `MOKOUP2P_RELAY_TOKEN` | 是 | 中转节点读取房间名单所用的共享令牌。 |
 | `MOKOUP2P_PORT` | 否，默认 `8080` | 服务端在宿主机上的 HTTP 端口。放在 Caddy 后面时可以只绑定本机，见下文。 |
 
+不放反向代理时，客户端里的服务端地址直接填 `服务器IP:端口` 即可，例如 `1.2.3.4:8080`。不写协议时客户端按 `http://` 连接，不写端口时按 `8080`。端口改过的话要写上，例如 `1.2.3.4:9000`。注意这种方式是明文 HTTP，登录密码和令牌不加密，只适合内网或测试；公网请按下一节配置 HTTPS。
+
 服务端容器内部的 `MOKOUP2P_LISTEN`（`:8080`）和 `MOKOUP2P_DB`（`/data/mokoup2p.db`）一般不需要改。
 
 每个用户可创建的房间数（默认 5）和每个房间的设备上限（默认 32）不是环境变量，而是系统设置，由管理员在 GUI 的"管理 → 系统设置"中修改。
@@ -83,7 +85,7 @@ p2p.example.com {
 docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.caddy.yml up -d --build
 ```
 
-客户端里填写的服务端地址为 `https://p2p.example.com`。中转端口 11010 不经过 Caddy：EasyTier 的流量本身已用房间的网络密钥端到端加密。
+客户端里填写的服务端地址为 `https://p2p.example.com`（要写上 `https://`，否则会按 `http://…:8080` 连接）。中转端口 11010 不经过 Caddy：EasyTier 的流量本身已用房间的网络密钥端到端加密。
 
 防火墙需要放行：80/tcp、443/tcp（Caddy），以及 11010/tcp、11010/udp（中转节点）。
 

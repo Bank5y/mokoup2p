@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -310,13 +311,36 @@ func (d *Daemon) handleSetServer(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, d.status())
 }
 
+// DefaultServerPort is the port assumed when a server address has neither a
+// scheme nor a port; it matches the default deployment (MOKOUP2P_PORT).
+const DefaultServerPort = "8080"
+
+// normalizeServerURL accepts a full http(s) URL, or a bare host[:port] which
+// it reads as http://host:port (port defaulting to DefaultServerPort).
 func normalizeServerURL(raw string) (string, error) {
 	raw = strings.TrimSpace(raw)
+	bad := &api.Error{Code: api.ErrBadRequest, Message: "server address must be host[:port] (e.g. 1.2.3.4:8080) or an http:// or https:// URL"}
+	if raw == "" {
+		return "", bad
+	}
+	if !strings.Contains(raw, "://") {
+		host := strings.TrimRight(raw, "/")
+		if _, _, err := net.SplitHostPort(host); err != nil {
+			host = net.JoinHostPort(strings.Trim(host, "[]"), DefaultServerPort)
+		}
+		raw = "http://" + host
+	}
 	u, err := url.Parse(raw)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return "", &api.Error{Code: api.ErrBadRequest, Message: "server address must be an http:// or https:// URL"}
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" ||
+		strings.ContainsAny(u.Host, " \t") || (u.Port() != "" && !isPort(u.Port())) {
+		return "", bad
 	}
 	return strings.TrimRight(u.String(), "/"), nil
+}
+
+func isPort(s string) bool {
+	n, err := strconv.Atoi(s)
+	return err == nil && n > 0 && n < 65536
 }
 
 func (d *Daemon) handleLogin(w http.ResponseWriter, r *http.Request) {

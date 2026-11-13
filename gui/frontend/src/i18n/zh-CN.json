@@ -5,7 +5,7 @@
   "login": {
     "title": "登录",
     "serverUrl": "服务端地址",
-    "serverUrlPlaceholder": "https://p2p.example.com",
+    "serverUrlPlaceholder": "1.2.3.4:8080 或 https://p2p.example.com",
     "username": "用户名",
     "password": "密码",
     "submit": "登录",
