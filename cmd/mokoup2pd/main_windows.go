@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -11,6 +10,8 @@ import (
 	"os/signal"
 	"os/user"
 	"path/filepath"
+	"strings"
+	"syscall"
 	"time"
 
 	"golang.org/x/sys/windows/svc"
@@ -24,8 +25,9 @@ import (
 const (
 	serviceName = "mokoup2p"
 	usage       = `用法：
-  mokoup2pd install [-user 用户名]  注册并启动 Windows 服务（需要管理员权限）；
-                                   -user 是可以使用客户端的用户，默认为当前用户
+  mokoup2pd install [-user 用户名]  注册（或升级）并启动 Windows 服务（需要管理员权限）；
+                                   -user 是可以使用客户端的用户。默认：首次安装为当前用户，
+                                   升级已有服务时沿用原来的用户
   mokoup2pd uninstall              停止并删除 Windows 服务
   mokoup2pd run                    在控制台中运行（调试用）
 `
@@ -151,13 +153,13 @@ func (s *service) Execute(_ []string, requests <-chan svc.ChangeRequest, status 
 	}
 }
 
-// install registers the service for the given user (default: whoever runs
-// the installer) and starts it.
+// install registers the service for the given user and starts it. Without
+// -user, a fresh install admits whoever runs it; reinstalling over an
+// existing service (an upgrade) keeps the user that service admitted, so an
+// administrator, or the updater, upgrading for someone else does not lock
+// them out. The existing service is stopped (leaving any room) and repointed
+// at this executable.
 func install(username string) error {
-	sid, err := userSID(username)
-	if err != nil {
-		return err
-	}
 	exe, err := os.Executable()
 	if err != nil {
 		return err
@@ -168,8 +170,12 @@ func install(username string) error {
 	}
 	defer m.Disconnect()
 	if s, err := m.OpenService(serviceName); err == nil {
-		s.Close()
-		return errors.New("service already installed; run `mokoup2pd uninstall` first")
+		defer s.Close()
+		return reinstall(s, exe, username)
+	}
+	sid, err := userSID(username)
+	if err != nil {
+		return err
 	}
 	s, err := m.CreateService(serviceName, exe, mgr.Config{
 		DisplayName: "mokoup2p",
@@ -189,6 +195,59 @@ func install(username string) error {
 	}
 	fmt.Printf("已注册并启动服务 %s（允许用户 %s）\n", serviceName, sid)
 	return nil
+}
+
+func reinstall(s *mgr.Service, exe, username string) error {
+	cfg, err := s.Config()
+	if err != nil {
+		return fmt.Errorf("read service configuration: %w", err)
+	}
+	sid := ""
+	if username != "" {
+		if sid, err = daemon.LookupUserSID(username); err != nil {
+			return err
+		}
+	} else if sid = ipcUserArg(cfg.BinaryPathName); sid == "" {
+		if sid, err = userSID(""); err != nil {
+			return err
+		}
+	}
+	stopService(s)
+	cfg.BinaryPathName = syscall.EscapeArg(exe) + " -ipc-user " + sid
+	cfg.StartType = mgr.StartAutomatic
+	if err := s.UpdateConfig(cfg); err != nil {
+		return fmt.Errorf("update service: %w", err)
+	}
+	if err := s.Start(); err != nil {
+		return fmt.Errorf("start service: %w", err)
+	}
+	fmt.Printf("已更新并启动服务 %s（允许用户 %s）\n", serviceName, sid)
+	return nil
+}
+
+// ipcUserArg returns the SID after -ipc-user in a service command line.
+func ipcUserArg(cmdline string) string {
+	f := strings.Fields(cmdline)
+	for i := 0; i+1 < len(f); i++ {
+		if f[i] == "-ipc-user" {
+			return f[i+1]
+		}
+	}
+	return ""
+}
+
+// stopService stops s if it runs and waits (up to 20s) until it has stopped.
+func stopService(s *mgr.Service) {
+	st, err := s.Control(svc.Stop)
+	if err != nil {
+		return
+	}
+	for deadline := time.Now().Add(20 * time.Second); st.State != svc.Stopped && time.Now().Before(deadline); {
+		time.Sleep(300 * time.Millisecond)
+		if st, err = s.Query(); err != nil {
+			return
+		}
+	}
 }
 
 func userSID(username string) (string, error) {
@@ -214,14 +273,7 @@ func uninstall() error {
 		return fmt.Errorf("service not installed: %w", err)
 	}
 	defer s.Close()
-	if st, err := s.Control(svc.Stop); err == nil {
-		for deadline := time.Now().Add(20 * time.Second); st.State != svc.Stopped && time.Now().Before(deadline); {
-			time.Sleep(300 * time.Millisecond)
-			if st, err = s.Query(); err != nil {
-				break
-			}
-		}
-	}
+	stopService(s)
 	if err := s.Delete(); err != nil {
 		return fmt.Errorf("delete service: %w", err)
 	}

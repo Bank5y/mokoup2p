@@ -4,7 +4,7 @@
 
 | 部分 | 说明 |
 | --- | --- |
-| `mokoup2pd.exe` | Windows 服务 `mokoup2p`（LocalSystem，自动启动，失败后自动重启）。`install [-user 用户名]` 注册并启动，`uninstall` 停止并删除，`run` 在控制台运行（调试）。 |
+| `mokoup2pd.exe` | Windows 服务 `mokoup2p`（LocalSystem，自动启动，失败后自动重启）。`install [-user 用户名]` 注册并启动（已注册时就地升级，沿用原来允许的用户），`uninstall` 停止并删除，`run` 在控制台运行（调试）。 |
 | IPC | 命名管道 `\\.\pipe\mokoup2p`。ACL 为 `D:P(A;;GA;;;SY)(A;;GRGW;;;<用户 SID>)`：只有 SYSTEM 和安装时指定的用户能连接。服务以 `-ipc-user <SID>` 参数注册。 |
 | 状态 | `%ProgramData%\mokoup2p\state.json`（刷新令牌、设备标识），日志 `mokoup2pd.log`。 |
 | `easytier-core.exe` | 锁定的 v2.6.4，未修改，作为子进程运行，放进一个 "关闭即终止" 的作业对象：服务进程无论怎样退出，子进程都会随之结束；Wintun 网卡随进程消失。启动时若 PID 文件指向的进程仍是 `easytier-core.exe`，先将其结束（残留清理）。 |
@@ -44,3 +44,13 @@ EasyTier 的 Windows 压缩包包含：
 4. 同一时间物理局域网上的其他机器也应照常收到这个广播（修复不拦截原始包）。
 5. A 离开房间后再发：B 不再收到。
 6. 用至少一款依赖 UDP 受限广播发现房间的局域网游戏（或上面的测试工具）在 A 与 B 之间互相发现。
+
+## 覆盖安装（#18 验收）
+
+安装包可以直接覆盖安装已有版本：先结束 GUI、停止后台服务，替换文件后由 `mokoup2pd.exe install` 就地更新服务，**沿用原服务允许连接的用户**（不再取运行安装程序的用户）。`/S` 静默安装不弹任何对话框；加上 `/relaunch` 时，装完后以登录用户身份（不提权）重新打开 GUI。
+
+1. 装好旧版本并登录；GUI 保持打开。双击新版本安装包覆盖安装：安装成功，不报文件被占用；GUI 被关闭；`sc qc mokoup2p` 的 `BINARY_PATH_NAME` 中 `-ipc-user` 与升级前相同；完成页勾选"启动 mokoup2p"打开的 GUI 不是管理员权限（任务管理器"提升的"一列为"否"），且无需重新登录。
+2. 用标准用户 A 安装（UAC 输入管理员 B 的凭据）。升级前后在 A 下运行 `mokoup2p.exe status` 都能连上后台服务；在 B 下运行被拒绝。
+3. 全新机器（没有 `mokoup2p` 服务）安装：服务允许的是运行安装程序的用户，和以前一样。
+4. 卸载 Npcap 后以管理员运行 `setup.exe /S`：全程没有任何对话框，退出码为 0，服务为 RUNNING。
+5. 以管理员运行 `setup.exe /S /relaunch`：装完后 GUI 以登录用户身份、非提权打开。
