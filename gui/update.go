@@ -97,3 +97,7 @@ func (a *App) InstallUpdate() error {
 	go wruntime.Quit(a.ctx)
 	return nil
 }
+
+// DependencyMissing reports whether a component the network engine needs
+// (Npcap on Windows) is not installed, so the GUI can say so up front.
+func (a *App) DependencyMissing() bool { return dependencyMissing() }

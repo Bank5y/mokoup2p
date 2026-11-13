@@ -27,7 +27,7 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	err := run(ctx, stateDir, func() (net.Listener, string, error) {
+	err := run(ctx, stateDir, ipc.EditionLinux, func() (net.Listener, string, error) {
 		path := ipc.DefaultSocketPath()
 		l, err := daemon.Listen(path)
 		return l, path, err

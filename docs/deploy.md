@@ -126,7 +126,8 @@ docker compose -f deploy/docker-compose.yml up -d --build
 
 | 平台 | 文件 | 安装 |
 | --- | --- | --- |
-| Windows x64 | `mokoup2p-<版本>-windows-x64-setup.exe` | 双击安装；注册并启动 Windows 服务 `mokoup2p`，只允许运行安装程序的用户使用。**需要另行安装 Npcap**（见下文）。卸载：控制面板，或运行安装目录下的 `uninstall.exe`。 |
+| Windows x64 | `mokoup2p-<版本>-windows-x64-setup.exe` | 双击安装；注册并启动 Windows 服务 `mokoup2p`，只允许运行安装程序的用户使用；覆盖安装即可升级，GUI 发现新版本时也可一键更新。**需要另行安装 Npcap**（见下文）。卸载：控制面板，或运行安装目录下的 `uninstall.exe`。 |
+| Windows x64（绿色版） | `mokoup2p-<版本>-windows-x64-portable.zip` | 解压到可写的目录（例如桌面），双击 `mokoup2p-gui.exe`，确认一次 UAC 即可使用。不注册服务、不写注册表、不开机自启；登录状态和日志在解压目录的 `data\` 中；退出 GUI 即离开房间。不能与安装版同时使用。**同样需要另行安装 Npcap**。 |
 | Debian / Ubuntu | `mokoup2p_<版本>_amd64.deb`、`_arm64.deb` | `sudo apt install ./mokoup2p_*.deb`；通过 sudo 安装时自动为当前用户启用 `mokoup2pd@<UID>`。 |
 | Fedora / RHEL / openSUSE | `mokoup2p-<版本>.x86_64.rpm`、`.aarch64.rpm` | `sudo dnf install ./mokoup2p-*.rpm` |
 | 其他 Linux | `mokoup2p-<版本>-linux-<架构>.tar.gz` | 解压后 `sudo ./install.sh`；卸载 `sudo ./uninstall.sh`（`--purge` 同时删除保存的登录状态）。 |

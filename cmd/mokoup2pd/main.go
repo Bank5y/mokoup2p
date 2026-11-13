@@ -24,12 +24,14 @@ import (
 
 	"github.com/Bank5y/mokoup2p/client/daemon"
 	"github.com/Bank5y/mokoup2p/client/engine/easytier"
+	"github.com/Bank5y/mokoup2p/client/ipc"
 )
 
-// run runs the daemon with its state in stateDir until ctx is done. listen
+// run runs the daemon with its state in stateDir until ctx is done. edition
+// is how this copy was packaged (empty: the platform's default). listen
 // opens the IPC listener once the daemon has started; it also returns its
 // address for the log.
-func run(ctx context.Context, stateDir string, listen func() (net.Listener, string, error)) error {
+func run(ctx context.Context, stateDir string, edition ipc.Edition, listen func() (net.Listener, string, error)) error {
 	if err := os.MkdirAll(stateDir, 0o700); err != nil {
 		return fmt.Errorf("create state directory: %w", err)
 	}
@@ -42,7 +44,7 @@ func run(ctx context.Context, stateDir string, listen func() (net.Listener, stri
 	platformEngineOptions(&opts)
 	eng := easytier.New(opts)
 
-	d, err := daemon.New(daemon.Config{StateDir: stateDir, Engine: eng})
+	d, err := daemon.New(daemon.Config{StateDir: stateDir, Engine: eng, Edition: edition})
 	if err != nil {
 		return fmt.Errorf("start: %w", err)
 	}

@@ -16,6 +16,9 @@ var assets embed.FS
 
 func main() {
 	app := NewApp()
+	if !startPortable(app.ipc) {
+		return
+	}
 	err := wails.Run(&options.App{
 		Title:            "mokoup2p",
 		Width:            960,

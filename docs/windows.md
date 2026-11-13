@@ -64,3 +64,24 @@ EasyTier 的 Windows 压缩包包含：
 3. 重复第 1 步，在 UAC 中点"否"：GUI 留在原处，提示"已取消更新"，仍在房间中。
 4. 把 Release 里的 `SHA256SUMS` 换成错误的哈希再试：提示"安装包校验失败"，不弹 UAC，`%TEMP%\mokoup2p-update\` 中没有安装包。
 5. Linux 或绿色版上点"更新"：只打开 Release 页面。
+
+## 绿色版（#22 验收）
+
+`mokoup2p-<版本>-windows-x64-portable.zip` 与安装版是同样的程序，多一个标记文件 `portable`。GUI 看到它时：
+
+- 若本机已有 `mokoup2p` 服务（装了安装版），提示使用安装版并退出；
+- 若命名管道上已有后台服务应答（绿色版已在运行），直接进入，单实例锁会把已打开的窗口调出来；
+- 否则检查 exe 旁的 `data\` 可写，经 UAC 隐藏启动 `mokoup2pd.exe portable -ipc-user <当前用户 SID> -state-dir <data> -parent-pid <GUI 进程>`，等它应答后打开窗口。
+
+这个后台进程只允许当前用户连接管道，状态和日志写在 `data\`，GUI 进程结束时随之退出（离开房间，`easytier-core.exe` 和虚拟网卡一起清理）。GUI 启动时检测 Npcap（安装版也一样），缺少时在顶部提示并给出下载按钮。
+
+1. 在没有安装版的机器上，把 zip 解压到桌面，双击 `mokoup2p-gui.exe`：弹一次 UAC；确认后能登录、加入房间、与另一台设备互 ping。`data\` 下有 `state.json` 和 `mokoup2pd.log`。
+2. 再次双击 `mokoup2p-gui.exe`：不弹 UAC，已有窗口被调出。
+3. 托盘"退出"：任务管理器里 `mokoup2pd.exe`、`easytier-core.exe` 都消失，网络适配器中没有残留 `mokoup2p0`。在任务管理器里直接结束 `mokoup2p-gui.exe`，结果相同。
+4. 重新打开：无需重新登录（`data\state.json` 保留），不会自动回到房间。把整个文件夹拷到另一台机器上运行：同样无需重新登录。
+5. UAC 点"否"：提示需要管理员权限后退出，没有残留进程。
+6. 把文件夹放到 `C:\Program Files\` 下运行：提示数据目录不可写并退出，没有写入 `%ProgramData%`。
+7. 在装有安装版的机器上运行绿色版：提示"已安装 mokoup2p，请使用安装版"并退出，不弹 UAC。
+8. 运行前后对比 `sc query mokoup2p`（不存在）和 `HKLM\Software\mokoup2p`（不存在）：没有变化。
+9. 卸载 Npcap 后打开 GUI（安装版和绿色版各一次）：顶部提示缺少 Npcap，"下载 Npcap"打开 npcap.com。
+10. 有新版本时，绿色版的"更新"按钮只打开 Release 页面。

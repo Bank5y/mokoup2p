@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -14,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
 
@@ -30,6 +32,8 @@ const (
                                    升级已有服务时沿用原来的用户
   mokoup2pd uninstall              停止并删除 Windows 服务
   mokoup2pd run                    在控制台中运行（调试用）
+  mokoup2pd portable -ipc-user SID -state-dir 目录 [-parent-pid PID]
+                                   绿色版：由 GUI 经 UAC 启动，PID 进程退出时随之退出
 `
 )
 
@@ -56,6 +60,13 @@ func main() {
 		err = uninstall()
 	case "run":
 		err = runConsole()
+	case "portable":
+		fs := flag.NewFlagSet("portable", flag.ExitOnError)
+		sid := fs.String("ipc-user", "", "SID of the user allowed on the IPC pipe")
+		stateDir := fs.String("state-dir", "", "directory for saved state and the log")
+		parent := fs.Int("parent-pid", 0, "exit when this process (the GUI) exits")
+		_ = fs.Parse(os.Args[2:])
+		err = runPortable(*sid, *stateDir, *parent)
 	default:
 		fmt.Fprint(os.Stderr, usage)
 		os.Exit(2)
@@ -85,11 +96,48 @@ func runConsole() error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	return run(ctx, stateDir, func() (net.Listener, string, error) {
+	return run(ctx, stateDir, ipc.EditionWindowsInstaller, func() (net.Listener, string, error) {
 		pipe := ipc.DefaultSocketPath()
 		l, err := daemon.Listen(pipe)
 		return l, pipe, err
 	})
+}
+
+// runPortable runs the portable edition's daemon: started elevated by the
+// GUI, with its state next to the executables, admitting only the GUI's user,
+// and ending (leaving any room) when the GUI process ends.
+func runPortable(sid, stateDir string, parentPID int) error {
+	if sid == "" || stateDir == "" {
+		return errors.New("portable needs -ipc-user and -state-dir")
+	}
+	if err := os.MkdirAll(stateDir, 0o700); err != nil {
+		return err
+	}
+	if f, err := os.OpenFile(filepath.Join(stateDir, "mokoup2pd.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600); err == nil {
+		log.SetOutput(f)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if parentPID > 0 {
+		h, err := windows.OpenProcess(windows.SYNCHRONIZE, false, uint32(parentPID))
+		if err != nil {
+			return fmt.Errorf("watch GUI process %d: %w", parentPID, err)
+		}
+		go func() {
+			defer windows.CloseHandle(h)
+			_, _ = windows.WaitForSingleObject(h, windows.INFINITE)
+			log.Printf("GUI process %d ended; stopping", parentPID)
+			cancel()
+		}()
+	}
+	err := run(ctx, stateDir, ipc.EditionWindowsPortable, func() (net.Listener, string, error) {
+		l, err := daemon.ListenPipe(ipc.DefaultPipeName, sid)
+		return l, ipc.DefaultPipeName, err
+	})
+	if err != nil {
+		log.Print(err)
+	}
+	return err
 }
 
 // runService runs under the service control manager. The service was
@@ -124,7 +172,7 @@ func (s *service) Execute(_ []string, requests <-chan svc.ChangeRequest, status 
 	defer cancel()
 	done := make(chan error, 1)
 	go func() {
-		done <- run(ctx, s.stateDir, func() (net.Listener, string, error) {
+		done <- run(ctx, s.stateDir, ipc.EditionWindowsInstaller, func() (net.Listener, string, error) {
 			l, err := daemon.ListenPipe(ipc.DefaultPipeName, s.sid)
 			return l, ipc.DefaultPipeName, err
 		})

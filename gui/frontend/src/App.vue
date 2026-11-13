@@ -5,6 +5,7 @@ import { t, errorText } from './i18n/index.js'
 import LoginView from './views/LoginView.vue'
 import HomeView from './views/HomeView.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
+import DependencyNotice from './components/DependencyNotice.vue'
 import { checkAtStartup } from './update.js'
 
 // current is the daemon status; null until the first answer arrives.
@@ -53,6 +54,7 @@ onUnmounted(() => {
 
 <template>
   <main class="app">
+    <DependencyNotice />
     <UpdateBanner :edition="current?.edition" />
     <div v-if="error" class="app-error">
       <p class="notice notice-error">{{ error }}</p>

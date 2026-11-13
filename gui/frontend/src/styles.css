@@ -246,3 +246,4 @@ body { margin: 0; }
 .checkbox { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
 .button-row { display: flex; gap: var(--space-2); }
 .update-banner-grow { margin-right: auto; font-weight: 400; }
+.dependency-notice { color: var(--color-error); background: var(--color-error-bg); }
