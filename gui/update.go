@@ -23,10 +23,6 @@ const (
 	errUpdateLaunchFailed     api.ErrorCode = "update_launch_failed"
 )
 
-// errElevationCancelled is returned by runElevated when the user declines
-// the UAC prompt.
-var errElevationCancelled = errors.New("elevation cancelled")
-
 // CheckUpdate asks the daemon for the newest release.
 func (a *App) CheckUpdate() (ipc.UpdateInfo, error) {
 	ctx, cancel := a.timeout()
@@ -56,9 +52,10 @@ func (a *App) OpenURL(url string) {
 
 // InstallUpdate updates the Windows installer edition in one go: it checks
 // again, downloads the installer and verifies it against SHA256SUMS, then
-// runs it elevated (UAC) as a silent install that reopens the GUI when done,
-// and quits. The service restarts during the install, so the device leaves
-// its room; the frontend says so before calling this.
+// runs it elevated (UAC) as a silent install and quits. A helper left behind,
+// unelevated, waits for the installer and reopens the GUI as this user (or
+// says the install failed). The service restarts during the install, so the
+// device leaves its room; the frontend says so before calling this.
 func (a *App) InstallUpdate() error {
 	ctx, cancel := context.WithTimeout(a.ctx, 10*time.Minute)
 	defer cancel()
@@ -66,14 +63,10 @@ func (a *App) InstallUpdate() error {
 	if err != nil {
 		return codeError(err)
 	}
-	st, err := a.ipc.Status(ctx)
-	if err != nil {
-		return codeError(err)
-	}
-	if st.Edition != ipc.EditionWindowsInstaller || !info.Available || info.AssetURL == "" || info.ChecksumsURL == "" {
+	if !info.Available || !info.Installable {
 		return errors.New(string(errUpdateUnsupported))
 	}
-	dir := filepath.Join(os.TempDir(), "mokoup2p-update")
+	dir := updateDir()
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return errors.New(string(errUpdateDownloadFailed))
 	}
@@ -86,17 +79,19 @@ func (a *App) InstallUpdate() error {
 		log.Printf("update: %v", err)
 		return errors.New(string(errUpdateDownloadFailed))
 	}
-	switch err := runElevated(path, "/S /relaunch"); {
+	switch err := startInstaller(path); {
 	case errors.Is(err, errElevationCancelled):
 		return errors.New(string(errUpdateCancelled))
 	case err != nil:
 		log.Printf("update: run installer: %v", err)
 		return errors.New(string(errUpdateLaunchFailed))
 	}
-	// The installer closes the GUI too; quitting first lets it go cleanly.
+	// The installer replaces this executable, so quit now.
 	go wruntime.Quit(a.ctx)
 	return nil
 }
+
+func updateDir() string { return filepath.Join(os.TempDir(), "mokoup2p-update") }
 
 // DependencyMissing reports whether a component the network engine needs
 // (Npcap on Windows) is not installed, so the GUI can say so up front.

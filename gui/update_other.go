@@ -4,7 +4,7 @@ package main
 
 import "errors"
 
-// runElevated is only needed by the Windows installer edition.
-func runElevated(exe, args string) error {
-	return errors.New("not supported on this platform")
-}
+// Only the Windows installer edition installs updates itself.
+func startInstaller(string) error { return errors.New("not supported on this platform") }
+
+func afterUpdate() bool { return false }

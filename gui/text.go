@@ -36,3 +36,13 @@ func text(key string) string {
 	}
 	return key
 }
+
+// textf is text with {name} placeholders filled from params, like
+// t(key, params) in the frontend.
+func textf(key string, params map[string]string) string {
+	s := text(key)
+	for name, value := range params {
+		s = strings.ReplaceAll(s, "{"+name+"}", value)
+	}
+	return s
+}

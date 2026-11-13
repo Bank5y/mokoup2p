@@ -57,3 +57,13 @@ func writableDir(dir string) bool {
 	os.Remove(f.Name())
 	return true
 }
+
+// webviewDataDir keeps the portable edition's WebView2 profile in data\
+// next to the executables, so the portable edition writes nothing under
+// %APPDATA%. Empty (the Wails default) otherwise.
+func webviewDataDir() string {
+	if !isPortable() {
+		return ""
+	}
+	return filepath.Join(exeDir(), "data", "webview")
+}

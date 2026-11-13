@@ -100,6 +100,7 @@ func TestNewerReleaseIsOfferedWithTheWindowsInstaller(t *testing.T) {
 		AssetName:      "mokoup2p-0.2.0-windows-x64-setup.exe",
 		AssetURL:       "https://github.com/owner/repo/releases/download/v0.2.0/mokoup2p-0.2.0-windows-x64-setup.exe",
 		ChecksumsURL:   "https://github.com/owner/repo/releases/download/v0.2.0/SHA256SUMS",
+		Installable:    true,
 	}
 	if info != want {
 		t.Fatalf("want %+v\n got %+v", want, info)
@@ -112,8 +113,8 @@ func TestPortableEditionIsOfferedThePortableZip(t *testing.T) {
 
 	info := mustCheck(t, d)
 
-	if info.AssetName != "mokoup2p-0.2.0-windows-x64-portable.zip" {
-		t.Fatalf("want the portable zip, got %+v", info)
+	if info.AssetName != "mokoup2p-0.2.0-windows-x64-portable.zip" || info.Installable {
+		t.Fatalf("want the portable zip, to be fetched by hand, got %+v", info)
 	}
 }
 
@@ -123,7 +124,7 @@ func TestLinuxIsOfferedOnlyTheReleasePage(t *testing.T) {
 
 	info := mustCheck(t, d)
 
-	if !info.Available || info.AssetURL != "" || info.ReleaseURL == "" {
+	if !info.Available || info.AssetURL != "" || info.ReleaseURL == "" || info.Installable {
 		t.Fatalf("want an available update with only a release page, got %+v", info)
 	}
 }
@@ -225,5 +226,35 @@ func TestNewerReleaseThanTheIgnoredOneIsNotIgnored(t *testing.T) {
 
 	if info := mustCheck(t, d); info.Ignored {
 		t.Fatalf("want 0.3.0 not ignored, got %+v", info)
+	}
+}
+
+func TestInstallerWithoutChecksumsIsNotInstallable(t *testing.T) {
+	rel := publishedRelease("0.2.0")
+	rel.Assets = rel.Assets[1:] // no SHA256SUMS
+	gh := fakeGitHub(t, rel)
+	d := startVersioned(t, "0.1.0", ipc.EditionWindowsInstaller, gh)
+
+	if info := mustCheck(t, d); info.Installable {
+		t.Fatalf("want an unverifiable installer not offered for installing, got %+v", info)
+	}
+}
+
+func TestTurningAutomaticCheckBackOnIsRememberedAcrossRestarts(t *testing.T) {
+	d := startVersioned(t, "0.1.0", ipc.EditionLinux, "")
+	for _, on := range []bool{false, true} {
+		if _, err := d.IPC.SetUpdateSettings(ctx, ipc.UpdateSettings{AutoCheck: on}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	d.Restart(t)
+
+	s, err := d.IPC.UpdateSettings(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !s.AutoCheck {
+		t.Fatalf("want automatic check on, got %+v", s)
 	}
 }

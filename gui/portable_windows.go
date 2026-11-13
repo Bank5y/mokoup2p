@@ -18,14 +18,14 @@ const serviceName = "mokoup2p"
 
 // startPortable prepares the portable edition before the window opens and
 // reports whether the GUI should go on. In the installer edition it does
-// nothing. Problems are shown in a message box, since there is no window
-// yet.
+// nothing. Problems are shown in a message box (text from the resource
+// file), since there is no window yet.
 func startPortable(c *ipc.Client) bool {
 	if !isPortable() {
 		return true
 	}
 	if serviceInstalled() {
-		fail("本机已安装 mokoup2p，请使用安装版（开始菜单中的 mokoup2p），或先卸载安装版再使用绿色版。")
+		fail(text("portable.serviceInstalled"))
 		return false
 	}
 	// Already running: this is a second launch of the portable GUI, whose
@@ -36,12 +36,12 @@ func startPortable(c *ipc.Client) bool {
 	dir := exeDir()
 	data := filepath.Join(dir, "data")
 	if !writableDir(data) {
-		fail(fmt.Sprintf("无法写入数据目录：\n%s\n\n请把整个 mokoup2p 文件夹移到可写的位置（例如桌面或 D:\\）后再运行。", data))
+		fail(textf("portable.dataNotWritable", map[string]string{"dir": data}))
 		return false
 	}
 	u, err := user.Current()
 	if err != nil {
-		fail("无法确定当前用户：" + err.Error())
+		fail(textf("portable.noUser", map[string]string{"error": err.Error()}))
 		return false
 	}
 	args := fmt.Sprintf("portable -ipc-user %s -state-dir %s -parent-pid %d",
@@ -49,14 +49,14 @@ func startPortable(c *ipc.Client) bool {
 	err = shellRunAs(filepath.Join(dir, "mokoup2pd.exe"), args, windows.SW_HIDE)
 	switch {
 	case errors.Is(err, errElevationCancelled):
-		fail("创建虚拟网卡需要管理员权限。已取消，mokoup2p 将退出。")
+		fail(text("portable.elevationCancelled"))
 		return false
 	case err != nil:
-		fail("无法启动后台服务：" + err.Error())
+		fail(textf("portable.startFailed", map[string]string{"error": err.Error()}))
 		return false
 	}
 	if !daemonAnswers(c, 20*time.Second) {
-		fail("后台服务没有启动，详见：\n" + filepath.Join(data, "mokoup2pd.log"))
+		fail(textf("portable.notAnswering", map[string]string{"log": filepath.Join(data, "mokoup2pd.log")}))
 		return false
 	}
 	return true

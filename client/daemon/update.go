@@ -59,6 +59,7 @@ func (d *Daemon) handleCheckUpdate(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+		info.Installable = d.cfg.Edition == ipc.EditionWindowsInstaller && info.AssetURL != "" && info.ChecksumsURL != ""
 	}
 	writeJSON(w, http.StatusOK, info)
 }

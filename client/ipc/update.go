@@ -45,6 +45,10 @@ type UpdateInfo struct {
 	AssetURL  string `json:"assetUrl,omitempty"`
 	// ChecksumsURL is the release's SHA256SUMS file.
 	ChecksumsURL string `json:"checksumsUrl,omitempty"`
+	// Installable is true when this edition can download, verify and run the
+	// update itself (the Windows installer edition, with both the installer
+	// and SHA256SUMS present). Otherwise front ends link to ReleaseURL.
+	Installable bool `json:"installable,omitempty"`
 }
 
 type UpdateSettings struct {

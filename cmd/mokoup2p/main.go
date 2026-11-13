@@ -308,8 +308,11 @@ func cmdVersion(ctx context.Context, c *ipc.Client) error {
 // or with the package manager / a new download (Linux).
 func cmdUpdate(ctx context.Context, c *ipc.Client, args []string) error {
 	fs := flag.NewFlagSet("update", flag.ExitOnError)
-	_ = fs.Bool("check", true, "check for a newer release (the only action)")
+	check := fs.Bool("check", false, "check for a newer release")
 	_ = fs.Parse(args)
+	if !*check {
+		return inputError("命令行只能检查更新：mokoup2p update --check。安装更新请使用 GUI（Windows 安装版）或下载新版本")
+	}
 	info, err := c.CheckUpdate(ctx)
 	if err != nil {
 		return err

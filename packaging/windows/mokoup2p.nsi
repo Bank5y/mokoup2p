@@ -10,7 +10,10 @@
 ; Installing over an existing copy upgrades it in place: the GUI is closed,
 ; the service is stopped and re-pointed at the new files, keeping the user it
 ; admits on its pipe. Silent mode (/S) asks nothing; /relaunch additionally
-; starts the GUI, unelevated, once done (used by the GUI's updater).
+; starts the GUI through Explorer once done (for administrators deploying by
+; hand: like the finish page, this reaches the signed-in user only when that
+; user is the one who elevated). The GUI's updater does not use it: it leaves
+; an unelevated helper behind that reopens the GUI.
 
 Unicode true
 !include "MUI2.nsh"
@@ -75,6 +78,17 @@ Function .onInstSuccess
 FunctionEnd
 
 ; Npcap provides Packet.dll, which easytier-core needs (see ADR-0004).
+; CloseGUI ends the GUI processes started from this install directory, in
+; every session (their executable is about to be replaced or removed), and
+; leaves alone any other copy such as the portable edition.
+!macro CLOSE_GUI un
+Function ${un}CloseGUI
+  nsExec::ExecToLog `powershell -NoProfile -NonInteractive -Command "Get-Process mokoup2p-gui -ErrorAction SilentlyContinue | Where-Object { $$_.Path -eq '$INSTDIR\mokoup2p-gui.exe' } | Stop-Process -Force"`
+FunctionEnd
+!macroend
+!insertmacro CLOSE_GUI ""
+!insertmacro CLOSE_GUI "un."
+
 ; Silent installs skip the question; the GUI reports a missing Npcap itself.
 Function CheckNpcap
   ${If} ${Silent}
@@ -94,7 +108,7 @@ Section "mokoup2p" SecMain
   ; Upgrading: close the GUI and stop the old service (it leaves its room) so
   ; their files can be replaced. The service stays registered: install below
   ; re-points it and keeps the user it admits.
-  nsExec::ExecToLog 'taskkill /F /IM mokoup2p-gui.exe'
+  Call CloseGUI
   nsExec::ExecToLog 'net stop mokoup2p'
 
   File "${STAGE}\mokoup2pd.exe"
@@ -139,7 +153,7 @@ SectionEnd
 Section "Uninstall"
   SetRegView 64
   ; Close the GUI, then stop (leaving the room) and delete the service.
-  nsExec::ExecToLog 'taskkill /F /IM mokoup2p-gui.exe'
+  Call un.CloseGUI
   nsExec::ExecToLog '"$INSTDIR\mokoup2pd.exe" uninstall'
 
   Delete "$INSTDIR\mokoup2pd.exe"

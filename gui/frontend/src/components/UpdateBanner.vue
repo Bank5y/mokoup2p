@@ -1,22 +1,18 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { installUpdate, openURL } from '../backend.js'
 import { t, errorText } from '../i18n/index.js'
 import { available, ignore } from '../update.js'
-
-// edition is the daemon status's edition: only the Windows installer
-// edition updates itself; the others are pointed at the release page.
-const props = defineProps({ edition: { type: String, default: '' } })
 
 const confirming = ref(false)
 const busy = ref(false)
 const error = ref('')
 
-const oneClick = computed(() => props.edition === 'windows-installer' && !!available.value?.assetUrl)
-
 function update() {
   error.value = ''
-  if (oneClick.value) confirming.value = true
+  // Only the Windows installer edition installs updates itself (the daemon
+  // decides); the others are pointed at the release page.
+  if (available.value.installable) confirming.value = true
   else openURL(available.value.releaseUrl)
 }
 

@@ -138,7 +138,17 @@
     "confirm": "更新到 {version} 会断开当前房间，完成后需要重新加入。安装需要管理员权限确认。",
     "confirmYes": "下载并安装",
     "confirmNo": "取消",
-    "installing": "正在下载并校验安装包…"
+    "installing": "正在下载并校验安装包…",
+    "installFailed": "mokoup2p 更新安装失败（退出码 {code}），仍在使用原来的版本。可以稍后重试，或到发布页下载安装包手动安装。",
+    "reopenFailed": "更新已完成，但无法自动打开 mokoup2p，请从开始菜单打开。"
+  },
+  "portable": {
+    "serviceInstalled": "本机已安装 mokoup2p，请使用安装版（开始菜单中的 mokoup2p），或先卸载安装版再使用绿色版。",
+    "dataNotWritable": "无法写入数据目录：\n{dir}\n\n请把整个 mokoup2p 文件夹移到可写的位置（例如桌面或 D:\\）后再运行。",
+    "noUser": "无法确定当前用户：{error}",
+    "elevationCancelled": "创建虚拟网卡需要管理员权限。已取消，mokoup2p 将退出。",
+    "startFailed": "无法启动后台服务：{error}",
+    "notAnswering": "后台服务没有启动，详见：\n{log}"
   },
   "admin": {
     "title": "用户管理",
