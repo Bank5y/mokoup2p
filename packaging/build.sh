@@ -8,6 +8,8 @@
 # Needs Go, npm, curl, unzip, and docker (for makensis and the Linux GUI).
 #   MOKOUP2P_LINUX_GUI=0   skip the Linux GUI (packages then hold daemon + CLI)
 #   MOKOUP2P_WINDOWS=0     skip the Windows installer
+#   MOKOUP2P_REPO=owner/name  GitHub repository checked for updates
+#                          (default Bank5y/mokoup2p; set it in forks)
 # The Linux GUI is built for amd64 only (cgo); arm64 packages hold daemon + CLI.
 set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -20,7 +22,8 @@ dist=$root/dist
 rm -rf "$build/stage" "$dist"
 mkdir -p "$build/stage" "$dist"
 export MOKOUP2P_CACHE=$build/cache
-ldflags="-s -w"
+bi=github.com/Bank5y/mokoup2p/buildinfo
+ldflags="-s -w -X $bi.Version=$version -X $bi.Repo=${MOKOUP2P_REPO:-Bank5y/mokoup2p}"
 
 frontend() {
 	if [ ! -f gui/frontend/dist/index.html ]; then

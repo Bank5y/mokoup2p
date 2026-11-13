@@ -16,6 +16,10 @@ type persisted struct {
 	DeviceID     string `json:"deviceId"`
 	DeviceName   string `json:"deviceName"`
 	RefreshToken string `json:"refreshToken,omitempty"`
+	// NoAutoUpdateCheck is stored inverted so that a missing field means
+	// the default, checking automatically.
+	NoAutoUpdateCheck    bool   `json:"noAutoUpdateCheck,omitempty"`
+	IgnoredUpdateVersion string `json:"ignoredUpdateVersion,omitempty"`
 }
 
 const stateFile = "state.json"

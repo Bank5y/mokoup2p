@@ -29,13 +29,21 @@ type Daemon struct {
 	Engine     *enginetest.Fake
 	SocketPath string
 
-	stateDir string
-	d        *daemon.Daemon
-	done     chan struct{}
+	stateDir  string
+	configure func(*daemon.Config)
+	d         *daemon.Daemon
+	done      chan struct{}
 }
 
 // Start runs a daemon with empty state. It is stopped when the test ends.
 func Start(t testing.TB) *Daemon {
+	t.Helper()
+	return StartWith(t, nil)
+}
+
+// StartWith is Start with configure applied to the daemon's configuration,
+// at the start and at every Restart.
+func StartWith(t testing.TB, configure func(*daemon.Config)) *Daemon {
 	t.Helper()
 	// Unix socket paths are limited to ~108 bytes, so avoid t.TempDir's long names.
 	sockDir, err := os.MkdirTemp("", "mkp2p")
@@ -46,6 +54,7 @@ func Start(t testing.TB) *Daemon {
 	d := &Daemon{
 		stateDir:   t.TempDir(),
 		SocketPath: filepath.Join(sockDir, "s", "daemon.sock"),
+		configure:  configure,
 	}
 	d.start(t)
 	t.Cleanup(d.stop)
@@ -63,7 +72,7 @@ func (d *Daemon) Restart(t testing.TB) {
 func (d *Daemon) start(t testing.TB) {
 	t.Helper()
 	d.Engine = &enginetest.Fake{}
-	dm, err := daemon.New(daemon.Config{
+	cfg := daemon.Config{
 		StateDir: d.stateDir,
 		Engine:   d.Engine,
 		Hostname: func() (string, error) { return Hostname, nil },
@@ -72,7 +81,11 @@ func (d *Daemon) start(t testing.TB) {
 		HeartbeatInterval: HeartbeatInterval,
 		ReconnectDelay:    20 * time.Millisecond,
 		PeerPollInterval:  PeerPollInterval,
-	})
+	}
+	if d.configure != nil {
+		d.configure(&cfg)
+	}
+	dm, err := daemon.New(cfg)
 	if err != nil {
 		t.Fatalf("new daemon: %v", err)
 	}

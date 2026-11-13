@@ -12,12 +12,14 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/Bank5y/mokoup2p/api"
+	"github.com/Bank5y/mokoup2p/buildinfo"
 	"github.com/Bank5y/mokoup2p/client/engine"
 	"github.com/Bank5y/mokoup2p/client/ipc"
 )
@@ -41,6 +43,14 @@ type Config struct {
 	// while in a room, to notice members switching between direct and
 	// relay. Default 2s.
 	PeerPollInterval time.Duration
+	// Version is this client's release version; default buildinfo.Version.
+	Version string
+	// Edition is how this client was packaged; default by platform
+	// (windows-installer or linux).
+	Edition ipc.Edition
+	// ReleasesURL is the GitHub "list releases" endpoint checked for
+	// updates; default buildinfo.ReleasesURL().
+	ReleasesURL string
 }
 
 type Daemon struct {
@@ -95,6 +105,18 @@ func New(cfg Config) (*Daemon, error) {
 	if cfg.ReconnectDelay <= 0 {
 		cfg.ReconnectDelay = time.Second
 	}
+	if cfg.Version == "" {
+		cfg.Version = buildinfo.Version
+	}
+	if cfg.Edition == "" {
+		cfg.Edition = ipc.EditionLinux
+		if runtime.GOOS == "windows" {
+			cfg.Edition = ipc.EditionWindowsInstaller
+		}
+	}
+	if cfg.ReleasesURL == "" {
+		cfg.ReleasesURL = buildinfo.ReleasesURL()
+	}
 	saved, err := loadState(cfg.StateDir, cfg.Hostname)
 	if err != nil {
 		return nil, err
@@ -113,6 +135,7 @@ func New(cfg Config) (*Daemon, error) {
 	d.accountRoutes(mux)
 	d.roomRoutes(mux)
 	d.membershipRoutes(mux)
+	d.updateRoutes(mux)
 	mux.HandleFunc("GET "+ipc.PathMembers, d.handleMembers)
 	d.http = &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	return d, nil
@@ -248,6 +271,8 @@ func (d *Daemon) status() ipc.Status {
 		ServerURL:  d.saved.ServerURL,
 		DeviceID:   d.saved.DeviceID,
 		DeviceName: d.saved.DeviceName,
+		Version:    d.cfg.Version,
+		Edition:    d.cfg.Edition,
 	}
 	if d.loggedIn {
 		st.State = ipc.StateIdle

@@ -33,6 +33,8 @@ const usage = `用法：mokoup2p <命令> [参数]
   leave                  退出当前房间
   members [-w]           列出当前房间的成员（-w：持续显示并实时刷新）
   kick 虚拟IP            把成员移出当前房间（仅房主）
+  update --check         检查是否有新版本
+  version                查看客户端版本
 `
 
 func main() {
@@ -68,6 +70,10 @@ func main() {
 		err = cmdMembers(ctx, client, os.Args[2:])
 	case "kick":
 		err = cmdKick(ctx, client, os.Args[2:])
+	case "update":
+		err = cmdUpdate(ctx, client, os.Args[2:])
+	case "version":
+		err = cmdVersion(ctx, client)
 	case "-h", "--help", "help":
 		fmt.Print(usage)
 	default:
@@ -212,6 +218,7 @@ func cmdStatus(ctx context.Context, c *ipc.Client) error {
 		server = "（未设置）"
 	}
 	fmt.Println("服务端：" + server)
+	fmt.Println("版本：" + st.Version)
 	fmt.Printf("设备：%s（%s）\n", st.DeviceName, st.DeviceID)
 	if text, ok := notices[st.Notice]; ok {
 		fmt.Println("提示：" + text)
@@ -260,6 +267,7 @@ var messages = map[api.ErrorCode]string{
 	ipc.ErrEngineFailed:            "网络组件启动失败，已退出房间",
 	ipc.ErrEngineDependencyMissing: "缺少网络组件依赖，已退出房间（Windows 请先安装 Npcap：https://npcap.com）",
 	ipc.ErrNotInRoom:               "当前未在房间中",
+	ipc.ErrUpdateCheckFailed:       "检查更新失败，请检查网络能否访问 GitHub",
 	api.ErrNotRoomMember:           "只有房间成员、房主和管理员可以查看成员",
 	api.ErrMemberNotFound:          "该设备不在这个房间中",
 }
@@ -285,4 +293,42 @@ func describe(err error) string {
 		return apiErr.Message
 	}
 	return "无法连接后台服务（mokoup2pd 是否在运行？）：" + err.Error()
+}
+
+func cmdVersion(ctx context.Context, c *ipc.Client) error {
+	st, err := c.Status(ctx)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("mokoup2p %s（%s）\n", st.Version, st.Edition)
+	return nil
+}
+
+// cmdUpdate only checks: installing an update is done from the GUI (Windows)
+// or with the package manager / a new download (Linux).
+func cmdUpdate(ctx context.Context, c *ipc.Client, args []string) error {
+	fs := flag.NewFlagSet("update", flag.ExitOnError)
+	_ = fs.Bool("check", true, "check for a newer release (the only action)")
+	_ = fs.Parse(args)
+	info, err := c.CheckUpdate(ctx)
+	if err != nil {
+		return err
+	}
+	fmt.Println("当前版本：" + info.CurrentVersion)
+	switch {
+	case info.LatestVersion == "":
+		fmt.Println("还没有发布任何正式版本")
+	case !info.Available:
+		fmt.Printf("已是最新（最新正式版 %s）\n", info.LatestVersion)
+	default:
+		fmt.Printf("发现新版本：%s\n", info.LatestVersion)
+		fmt.Println("发布说明：" + info.ReleaseURL)
+		if info.AssetURL != "" {
+			fmt.Println("下载：" + info.AssetURL)
+		}
+		if info.Ignored {
+			fmt.Println("（这个版本已在 GUI 中设为忽略）")
+		}
+	}
+	return nil
 }
