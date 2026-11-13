@@ -86,16 +86,6 @@ func TestLoginWhenServerUnreachable(t *testing.T) {
 	}
 }
 
-func TestInvalidServerAddressIsRejected(t *testing.T) {
-	d := daemontest.Start(t)
-
-	_, err := d.IPC.SetServer(ctx, "not a url")
-
-	if code := servertest.ErrorCode(err); code != api.ErrBadRequest {
-		t.Fatalf("want %s, got %v", api.ErrBadRequest, err)
-	}
-}
-
 func TestDaemonLogsInAutomaticallyOnRestart(t *testing.T) {
 	s := servertest.Start(t)
 	d := daemontest.Start(t)

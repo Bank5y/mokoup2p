@@ -12,11 +12,14 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/Bank5y/mokoup2p/api"
+	"github.com/Bank5y/mokoup2p/buildinfo"
 	"github.com/Bank5y/mokoup2p/client/engine"
 	"github.com/Bank5y/mokoup2p/client/ipc"
 )
@@ -40,6 +43,14 @@ type Config struct {
 	// while in a room, to notice members switching between direct and
 	// relay. Default 2s.
 	PeerPollInterval time.Duration
+	// Version is this client's release version; default buildinfo.Version.
+	Version string
+	// Edition is how this client was packaged; default by platform
+	// (windows-installer or linux).
+	Edition ipc.Edition
+	// ReleasesURL is the GitHub "list releases" endpoint checked for
+	// updates; default buildinfo.ReleasesURL().
+	ReleasesURL string
 }
 
 type Daemon struct {
@@ -94,6 +105,18 @@ func New(cfg Config) (*Daemon, error) {
 	if cfg.ReconnectDelay <= 0 {
 		cfg.ReconnectDelay = time.Second
 	}
+	if cfg.Version == "" {
+		cfg.Version = buildinfo.Version
+	}
+	if cfg.Edition == "" {
+		cfg.Edition = ipc.EditionLinux
+		if runtime.GOOS == "windows" {
+			cfg.Edition = ipc.EditionWindowsInstaller
+		}
+	}
+	if cfg.ReleasesURL == "" {
+		cfg.ReleasesURL = buildinfo.ReleasesURL()
+	}
 	saved, err := loadState(cfg.StateDir, cfg.Hostname)
 	if err != nil {
 		return nil, err
@@ -112,6 +135,7 @@ func New(cfg Config) (*Daemon, error) {
 	d.accountRoutes(mux)
 	d.roomRoutes(mux)
 	d.membershipRoutes(mux)
+	d.updateRoutes(mux)
 	mux.HandleFunc("GET "+ipc.PathMembers, d.handleMembers)
 	d.http = &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	return d, nil
@@ -247,6 +271,8 @@ func (d *Daemon) status() ipc.Status {
 		ServerURL:  d.saved.ServerURL,
 		DeviceID:   d.saved.DeviceID,
 		DeviceName: d.saved.DeviceName,
+		Version:    d.cfg.Version,
+		Edition:    d.cfg.Edition,
 	}
 	if d.loggedIn {
 		st.State = ipc.StateIdle
@@ -310,13 +336,36 @@ func (d *Daemon) handleSetServer(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, d.status())
 }
 
+// DefaultServerPort is the port assumed when a server address has neither a
+// scheme nor a port; it matches the default deployment (MOKOUP2P_PORT).
+const DefaultServerPort = "8080"
+
+// normalizeServerURL accepts a full http(s) URL, or a bare host[:port] which
+// it reads as http://host:port (port defaulting to DefaultServerPort).
 func normalizeServerURL(raw string) (string, error) {
 	raw = strings.TrimSpace(raw)
+	bad := &api.Error{Code: api.ErrBadRequest, Message: "server address must be host[:port] (e.g. 1.2.3.4:8080) or an http:// or https:// URL"}
+	if raw == "" {
+		return "", bad
+	}
+	if !strings.Contains(raw, "://") {
+		host := strings.TrimRight(raw, "/")
+		if _, _, err := net.SplitHostPort(host); err != nil {
+			host = net.JoinHostPort(strings.Trim(host, "[]"), DefaultServerPort)
+		}
+		raw = "http://" + host
+	}
 	u, err := url.Parse(raw)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return "", &api.Error{Code: api.ErrBadRequest, Message: "server address must be an http:// or https:// URL"}
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" ||
+		strings.ContainsAny(u.Host, " \t") || (u.Port() != "" && !isPort(u.Port())) {
+		return "", bad
 	}
 	return strings.TrimRight(u.String(), "/"), nil
+}
+
+func isPort(s string) bool {
+	n, err := strconv.Atoi(s)
+	return err == nil && n > 0 && n < 65536
 }
 
 func (d *Daemon) handleLogin(w http.ResponseWriter, r *http.Request) {

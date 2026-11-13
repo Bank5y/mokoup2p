@@ -5,7 +5,7 @@
   "login": {
     "title": "登录",
     "serverUrl": "服务端地址",
-    "serverUrlPlaceholder": "https://p2p.example.com",
+    "serverUrlPlaceholder": "1.2.3.4:8080 或 https://p2p.example.com",
     "username": "用户名",
     "password": "密码",
     "submit": "登录",
@@ -90,6 +90,12 @@
     "internal": "发生内部错误",
     "unknown": "发生未知错误",
     "member_not_found": "该设备不在这个房间中",
+    "update_unsupported": "当前版本不支持自动更新，请到发布页下载",
+    "update_download_failed": "下载安装包失败，请检查网络后重试",
+    "update_checksum_mismatch": "安装包校验失败（文件可能已损坏），已取消更新",
+    "update_cancelled": "已取消更新",
+    "update_launch_failed": "无法启动安装程序",
+    "update_check_failed": "检查更新失败，请检查网络能否访问 GitHub",
     "engine_dependency_missing": "缺少网络组件依赖，已退出房间。Windows 上请先安装 Npcap（https://npcap.com），安装时勾选默认选项即可。"
   },
   "settings": {
@@ -109,7 +115,40 @@
     "accountTitle": "账号",
     "loggedInAs": "当前账号：{username}",
     "logout": "退出登录",
-    "saving": "正在保存…"
+    "saving": "正在保存…",
+    "aboutTitle": "关于",
+    "version": "当前版本：{version}",
+    "autoCheck": "启动时自动检查更新",
+    "checkNow": "立即检查",
+    "checking": "正在检查…",
+    "upToDate": "已是最新版本",
+    "newVersion": "发现新版本 {version}，见页面顶部",
+    "newVersionIgnored": "发现新版本 {version}（已设为忽略）",
+    "unignore": "不再忽略"
+  },
+  "dependency": {
+    "npcapMissing": "未检测到 Npcap。mokoup2p 的网络组件需要它才能加入房间（Npcap 的许可不允许随 mokoup2p 分发），请下载安装，安装时保持默认选项即可。",
+    "download": "下载 Npcap"
+  },
+  "update": {
+    "available": "发现新版本 {version}",
+    "notes": "发布说明",
+    "update": "更新",
+    "ignore": "忽略此版本",
+    "confirm": "更新到 {version} 会断开当前房间，完成后需要重新加入。安装需要管理员权限确认。",
+    "confirmYes": "下载并安装",
+    "confirmNo": "取消",
+    "installing": "正在下载并校验安装包…",
+    "installFailed": "mokoup2p 更新安装失败（退出码 {code}），仍在使用原来的版本。可以稍后重试，或到发布页下载安装包手动安装。",
+    "reopenFailed": "更新已完成，但无法自动打开 mokoup2p，请从开始菜单打开。"
+  },
+  "portable": {
+    "serviceInstalled": "本机已安装 mokoup2p，请使用安装版（开始菜单中的 mokoup2p），或先卸载安装版再使用绿色版。",
+    "dataNotWritable": "无法写入数据目录：\n{dir}\n\n请把整个 mokoup2p 文件夹移到可写的位置（例如桌面或 D:\\）后再运行。",
+    "noUser": "无法确定当前用户：{error}",
+    "elevationCancelled": "创建虚拟网卡需要管理员权限。已取消，mokoup2p 将退出。",
+    "startFailed": "无法启动后台服务：{error}",
+    "notAnswering": "后台服务没有启动，详见：\n{log}"
   },
   "admin": {
     "title": "用户管理",

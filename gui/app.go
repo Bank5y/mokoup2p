@@ -15,6 +15,12 @@ const errDaemonUnreachable api.ErrorCode = "daemon_unreachable"
 // App is bound to the frontend. It only relays calls to the daemon over IPC
 // and holds no business rules. Errors reach the frontend as their error code
 // so the UI can pick the matching text from its resource file.
+//
+// Two exceptions on Windows need the user's own session, which the daemon
+// (a LocalSystem service, or not yet running) cannot act in: installing an
+// update (download, verify, UAC, reopen as this user: update.go) and starting
+// the portable edition's daemon (portable_windows.go). Which release and
+// whether it may be installed is still the daemon's call.
 type App struct {
 	ctx context.Context
 	ipc *ipc.Client

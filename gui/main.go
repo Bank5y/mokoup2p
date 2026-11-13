@@ -9,13 +9,20 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
 
 func main() {
+	if afterUpdate() {
+		return
+	}
 	app := NewApp()
+	if !startPortable(app.ipc) {
+		return
+	}
 	err := wails.Run(&options.App{
 		Title:            "mokoup2p",
 		Width:            960,
@@ -33,6 +40,7 @@ func main() {
 			UniqueId:               "mokoup2p-gui",
 			OnSecondInstanceLaunch: func(options.SecondInstanceData) { app.showWindow() },
 		},
+		Windows:    &windows.Options{WebviewUserDataPath: webviewDataDir()},
 		OnStartup:  app.startup,
 		OnShutdown: app.shutdown,
 		Bind:       []interface{}{app},

@@ -4,3 +4,4 @@ gui/frontend/dist/
 gui/build/bin/
 /build/
 /dist/
+/gui/gui

@@ -44,7 +44,7 @@ docker-compose 启动两个服务：服务端（`server`）和 EasyTier 中转�
 
 ## 安装包
 
-`packaging/build.sh 0.1.0` 在 `dist/` 中生成 Windows NSIS 安装包、Linux `.deb` / `.rpm` 和 tar.gz（x86_64、arm64），内含锁定版本的 EasyTier（版本与校验和在 `packaging/versions.env`）。需要 Go、npm、curl、unzip 和 Docker（makensis 与 Linux GUI 在容器中构建）。Windows 用户需另行安装 [Npcap](https://npcap.com)（[ADR-0004](docs/adr/0004-npcap-dependency.md)）。第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+`packaging/build.sh 0.1.0` 在 `dist/` 中生成 Windows NSIS 安装包和绿色版 zip、Linux `.deb` / `.rpm` 和 tar.gz（x86_64、arm64），内含锁定版本的 EasyTier（版本与校验和在 `packaging/versions.env`）。需要 Go、npm、curl、zip、unzip 和 Docker（makensis 与 Linux GUI 在容器中构建）。Windows 用户需另行安装 [Npcap](https://npcap.com)（[ADR-0004](docs/adr/0004-npcap-dependency.md)）。第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 客户端（Linux）
 

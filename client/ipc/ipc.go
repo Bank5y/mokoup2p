@@ -52,6 +52,10 @@ type Status struct {
 	// up. While it is down the daemon keeps reconnecting; a room survives
 	// if it comes back within api.HeartbeatTimeout.
 	Connected bool `json:"connected"`
+	// Version is the daemon's release version (buildinfo.Version) and
+	// Edition how it was packaged.
+	Version string  `json:"version"`
+	Edition Edition `json:"edition"`
 	// Revision changes whenever anything shown in the status changes, or
 	// the members of the current room change. See WaitStatus.
 	Revision uint64 `json:"revision"`

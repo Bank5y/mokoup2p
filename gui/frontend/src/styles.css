@@ -229,3 +229,21 @@ body { margin: 0; }
 /* Current room members. */
 .members { margin-bottom: var(--space-4); }
 .member-self { margin-left: var(--space-2); color: var(--color-text-muted); font-size: 12px; }
+
+/* Update banner and settings */
+.update-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.update-banner-text { font-weight: 600; }
+.update-banner-link { color: var(--color-primary); margin-right: auto; }
+.update-banner-error { color: var(--color-error); flex-basis: 100%; }
+.checkbox { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
+.button-row { display: flex; gap: var(--space-2); }
+.update-banner-grow { margin-right: auto; font-weight: 400; }
+.dependency-notice { color: var(--color-error); background: var(--color-error-bg); }

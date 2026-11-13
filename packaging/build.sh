@@ -3,11 +3,14 @@
 #   mokoup2p-VERSION-linux-{amd64,arm64}.tar.gz   (with install.sh / uninstall.sh)
 #   mokoup2p_VERSION_{amd64,arm64}.deb, mokoup2p-VERSION.{x86_64,aarch64}.rpm
 #   mokoup2p-VERSION-windows-x64-setup.exe        (NSIS)
+#   mokoup2p-VERSION-windows-x64-portable.zip     (no install: unzip and run)
 #
 # Usage: packaging/build.sh [VERSION]
-# Needs Go, npm, curl, unzip, and docker (for makensis and the Linux GUI).
+# Needs Go, npm, curl, zip, unzip, and docker (for makensis and the Linux GUI).
 #   MOKOUP2P_LINUX_GUI=0   skip the Linux GUI (packages then hold daemon + CLI)
 #   MOKOUP2P_WINDOWS=0     skip the Windows installer
+#   MOKOUP2P_REPO=owner/name  GitHub repository checked for updates
+#                          (default Bank5y/mokoup2p; set it in forks)
 # The Linux GUI is built for amd64 only (cgo); arm64 packages hold daemon + CLI.
 set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -20,7 +23,8 @@ dist=$root/dist
 rm -rf "$build/stage" "$dist"
 mkdir -p "$build/stage" "$dist"
 export MOKOUP2P_CACHE=$build/cache
-ldflags="-s -w"
+bi=github.com/Bank5y/mokoup2p/buildinfo
+ldflags="-s -w -X $bi.Version=$version -X $bi.Repo=${MOKOUP2P_REPO:-Bank5y/mokoup2p}"
 
 frontend() {
 	if [ ! -f gui/frontend/dist/index.html ]; then
@@ -92,6 +96,22 @@ windows() {
 	docker run --rm -v "$build/stage:/work" -u "$(id -u):$(id -g)" mokoup2p-nsis \
 		-V2 -DVERSION="$version" -DSTAGE=windows-amd64 -DOUTFILE="mokoup2p-$version-windows-x64-setup.exe" mokoup2p.nsi
 	mv "$build/stage/mokoup2p-$version-windows-x64-setup.exe" "$dist/"
+
+	# Portable zip: the same files plus the marker that makes the GUI start
+	# the daemon itself (elevated, state in data\) instead of using a service.
+	name=mokoup2p-$version-windows-x64-portable
+	rm -rf "$build/$name"
+	mkdir -p "$build/$name/licenses"
+	for f in mokoup2pd.exe mokoup2p.exe mokoup2p-gui.exe easytier-core.exe easytier-cli.exe wintun.dll WinDivert64.sys; do
+		cp "$stage/$f" "$build/$name/"
+	done
+	cp "$stage/THIRD_PARTY_NOTICES.txt" "$stage/wintun-LICENSE.txt" "$stage/EasyTier-LICENSE.txt" "$build/$name/licenses/"
+	printf '%s\r\n' \
+		"mokoup2p portable edition: this file makes mokoup2p-gui.exe start the" \
+		"background service itself (one UAC prompt) and keep its data in data\\." \
+		"Npcap must be installed separately: https://npcap.com" >"$build/$name/portable"
+	rm -f "$dist/$name.zip"
+	(cd "$build" && zip -qr "$dist/$name.zip" "$name")
 }
 
 linux amd64
