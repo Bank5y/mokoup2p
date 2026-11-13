@@ -53,7 +53,7 @@ onUnmounted(() => {
 
 <template>
   <main class="app">
-    <UpdateBanner />
+    <UpdateBanner :edition="current?.edition" />
     <div v-if="error" class="app-error">
       <p class="notice notice-error">{{ error }}</p>
       <button class="button" type="button" @click="refresh">{{ t('common.retry') }}</button>

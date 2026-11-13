@@ -245,3 +245,4 @@ body { margin: 0; }
 .update-banner-error { color: var(--color-error); flex-basis: 100%; }
 .checkbox { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
 .button-row { display: flex; gap: var(--space-2); }
+.update-banner-grow { margin-right: auto; font-weight: 400; }

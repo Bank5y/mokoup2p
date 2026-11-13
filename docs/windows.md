@@ -54,3 +54,13 @@ EasyTier 的 Windows 压缩包包含：
 3. 全新机器（没有 `mokoup2p` 服务）安装：服务允许的是运行安装程序的用户，和以前一样。
 4. 卸载 Npcap 后以管理员运行 `setup.exe /S`：全程没有任何对话框，退出码为 0，服务为 RUNNING。
 5. 以管理员运行 `setup.exe /S /relaunch`：装完后 GUI 以登录用户身份、非提权打开。
+
+## 一键更新（#21 验收）
+
+安装版 GUI 启动时检查 GitHub Releases。发现新版本后，点横幅上的"更新"，确认后 GUI 会依次：下载 `setup.exe` 到 `%TEMP%\mokoup2p-update\`，用同一 Release 的 `SHA256SUMS` 校验，经 UAC 以 `/S /relaunch` 运行安装包，然后自己退出；安装完成后 GUI 以原用户身份重新打开。下载和校验的逻辑有自动测试，以下步骤需在真机上验证（准备一个比本机版本号更高的 Release，例如在 fork 仓库里发布，并用 `MOKOUP2P_REPO` 构建本机版本）：
+
+1. 以标准用户登录并加入房间，打开 GUI：顶部出现"发现新版本"横幅。点"更新"：显示"会断开当前房间"的确认。
+2. 点"下载并安装"，在 UAC 中输入管理员凭据：GUI 退出，片刻后重新打开，非提权；`mokoup2p.exe status` 显示新版本，已登录、不在房间中，可以重新加入。
+3. 重复第 1 步，在 UAC 中点"否"：GUI 留在原处，提示"已取消更新"，仍在房间中。
+4. 把 Release 里的 `SHA256SUMS` 换成错误的哈希再试：提示"安装包校验失败"，不弹 UAC，`%TEMP%\mokoup2p-update\` 中没有安装包。
+5. Linux 或绿色版上点"更新"：只打开 Release 页面。

@@ -90,6 +90,11 @@
     "internal": "发生内部错误",
     "unknown": "发生未知错误",
     "member_not_found": "该设备不在这个房间中",
+    "update_unsupported": "当前版本不支持自动更新，请到发布页下载",
+    "update_download_failed": "下载安装包失败，请检查网络后重试",
+    "update_checksum_mismatch": "安装包校验失败（文件可能已损坏），已取消更新",
+    "update_cancelled": "已取消更新",
+    "update_launch_failed": "无法启动安装程序",
     "update_check_failed": "检查更新失败，请检查网络能否访问 GitHub",
     "engine_dependency_missing": "缺少网络组件依赖，已退出房间。Windows 上请先安装 Npcap（https://npcap.com），安装时勾选默认选项即可。"
   },
@@ -125,7 +130,11 @@
     "available": "发现新版本 {version}",
     "notes": "发布说明",
     "update": "更新",
-    "ignore": "忽略此版本"
+    "ignore": "忽略此版本",
+    "confirm": "更新到 {version} 会断开当前房间，完成后需要重新加入。安装需要管理员权限确认。",
+    "confirmYes": "下载并安装",
+    "confirmNo": "取消",
+    "installing": "正在下载并校验安装包…"
   },
   "admin": {
     "title": "用户管理",
